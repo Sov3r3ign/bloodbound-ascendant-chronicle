@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as DungeonRouteImport } from './routes/dungeon'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as ChroniclerRouteImport } from './routes/chronicler'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DungeonRoute = DungeonRouteImport.update({
   id: '/dungeon',
   path: '/dungeon',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/chronicler': typeof ChroniclerRoute
   '/create': typeof CreateRoute
   '/dungeon': typeof DungeonRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chronicler': typeof ChroniclerRoute
   '/create': typeof CreateRoute
   '/dungeon': typeof DungeonRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/chronicler': typeof ChroniclerRoute
   '/create': typeof CreateRoute
   '/dungeon': typeof DungeonRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chronicler' | '/create' | '/dungeon'
+  fullPaths: '/' | '/chronicler' | '/create' | '/dungeon' | '/sitemap.xml'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chronicler' | '/create' | '/dungeon'
-  id: '__root__' | '/' | '/chronicler' | '/create' | '/dungeon'
+  to: '/' | '/chronicler' | '/create' | '/dungeon' | '/sitemap.xml'
+  id: '__root__' | '/' | '/chronicler' | '/create' | '/dungeon' | '/sitemap.xml'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +76,18 @@ export interface RootRouteChildren {
   ChroniclerRoute: typeof ChroniclerRoute
   CreateRoute: typeof CreateRoute
   DungeonRoute: typeof DungeonRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dungeon': {
       id: '/dungeon'
       path: '/dungeon'
@@ -107,7 +124,18 @@ const rootRouteChildren: RootRouteChildren = {
   ChroniclerRoute: ChroniclerRoute,
   CreateRoute: CreateRoute,
   DungeonRoute: DungeonRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
