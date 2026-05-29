@@ -9,8 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DungeonRouteImport } from './routes/dungeon'
+import { Route as CreateRouteImport } from './routes/create'
+import { Route as ChroniclerRouteImport } from './routes/chronicler'
 import { Route as IndexRouteImport } from './routes/index'
 
+const DungeonRoute = DungeonRouteImport.update({
+  id: '/dungeon',
+  path: '/dungeon',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChroniclerRoute = ChroniclerRouteImport.update({
+  id: '/chronicler',
+  path: '/chronicler',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +37,61 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chronicler': typeof ChroniclerRoute
+  '/create': typeof CreateRoute
+  '/dungeon': typeof DungeonRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chronicler': typeof ChroniclerRoute
+  '/create': typeof CreateRoute
+  '/dungeon': typeof DungeonRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chronicler': typeof ChroniclerRoute
+  '/create': typeof CreateRoute
+  '/dungeon': typeof DungeonRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/chronicler' | '/create' | '/dungeon'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/chronicler' | '/create' | '/dungeon'
+  id: '__root__' | '/' | '/chronicler' | '/create' | '/dungeon'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChroniclerRoute: typeof ChroniclerRoute
+  CreateRoute: typeof CreateRoute
+  DungeonRoute: typeof DungeonRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/dungeon': {
+      id: '/dungeon'
+      path: '/dungeon'
+      fullPath: '/dungeon'
+      preLoaderRoute: typeof DungeonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chronicler': {
+      id: '/chronicler'
+      path: '/chronicler'
+      fullPath: '/chronicler'
+      preLoaderRoute: typeof ChroniclerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +104,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChroniclerRoute: ChroniclerRoute,
+  CreateRoute: CreateRoute,
+  DungeonRoute: DungeonRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
