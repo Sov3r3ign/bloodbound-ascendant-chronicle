@@ -165,7 +165,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Map */}
-          <RuneFrame className="p-3" ref={undefined}>
+          <RuneFrame className="p-3">
             <div className="mb-2 flex items-center justify-between">
               <div className="font-display text-[10px] tracking-[0.4em] text-arcane">DUNGEON</div>
               <div className="hidden gap-3 text-[10px] font-display tracking-widest text-muted-foreground md:flex">
