@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
+import { saveCharacter } from "@/lib/character-storage";
 import {
   ASPECTS,
   RACES,
@@ -99,6 +100,11 @@ function Forge() {
               ) : (
                 <Link
                   to="/dungeon"
+                  onClick={() => {
+                    if (raceId && aspectId) {
+                      saveCharacter({ name: name.trim(), raceId, aspectId, resonanceIds, vitals });
+                    }
+                  }}
                   className="rounded-sm border border-ember/50 bg-gradient-to-r from-ember/80 to-blood/80 px-8 py-2 font-display text-xs tracking-[0.3em] text-background shadow-arcane"
                 >
                   DESCEND →
