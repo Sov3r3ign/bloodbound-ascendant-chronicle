@@ -1,7 +1,22 @@
 // Bloodbound Ascendants — dungeon engine (procedural roguelike core)
+// Expanded: status effects, traps, shrines, chests, equipment, sanctuary floors,
+// narrative events, and run statistics.
 
-export type TileKind = "wall" | "floor" | "door" | "stairs";
-export type Tile = { kind: TileKind; seen: boolean; visible: boolean };
+export type TileKind = "wall" | "floor" | "door" | "stairs" | "shrine" | "trap" | "chest";
+export type Tile = { kind: TileKind; seen: boolean; visible: boolean; revealed?: boolean };
+
+export type StatusKey = "bleed" | "burn" | "poison" | "blessed" | "rooted";
+export type StatusMap = Partial<Record<StatusKey, number>>;
+
+export type Weapon = { name: string; die: number; bonus: number; tag?: "bleed" | "burn" | "vorpal" };
+export type Armor = { name: string; ac: number; dr: number };
+export type Trinket = { name: string; effect: string; heal?: number; xpMult?: number; focusRegen?: number };
+
+export type Equipment = {
+  weapon: Weapon | null;
+  armor: Armor | null;
+  trinket: Trinket | null;
+};
 
 export type Monster = {
   id: number;
@@ -12,12 +27,13 @@ export type Monster = {
   tone: "blood" | "ember" | "arcane" | "bone";
   hp: number;
   maxHp: number;
-  atk: number; // damage die max
-  bonus: number; // to-hit
+  atk: number;
+  bonus: number;
   ac: number;
   xp: number;
   awake: boolean;
   rootedFor: number;
+  statuses: StatusMap;
   boss?: boolean;
 };
 
@@ -25,8 +41,11 @@ export type Item = {
   id: number;
   x: number;
   y: number;
-  kind: "potion" | "elixir" | "gold" | "shard";
+  kind: "potion" | "elixir" | "gold" | "shard" | "weapon" | "armor" | "trinket";
   amount: number;
+  weapon?: Weapon;
+  armor?: Armor;
+  trinket?: Trinket;
 };
 
 export type Player = {
@@ -48,14 +67,36 @@ export type Player = {
   shards: number;
   potions: number;
   elixirs: number;
+  equipment: Equipment;
+  statuses: StatusMap;
 };
 
-export type LogEntry = { t: "narrative" | "roll" | "system" | "combat" | "loot"; m: string };
+export type LogEntry = { t: "narrative" | "roll" | "system" | "combat" | "loot" | "event"; m: string };
+
+export type RunCounters = {
+  kills: number;
+  bossKills: number;
+  damageDealt: number;
+  damageTaken: number;
+  goldEarned: number;
+  shardsEarned: number;
+};
+
+export type Cause = "claws" | "trap" | "fate" | "boss" | "unknown";
+
+export type ShopOffer = {
+  id: string;
+  label: string;
+  desc: string;
+  cost: number;
+  kind: "weapon" | "armor" | "trinket" | "potions" | "elixirs" | "heal" | "shield";
+  payload?: Weapon | Armor | Trinket | number;
+};
 
 export type GameState = {
   width: number;
   height: number;
-  tiles: Tile[][]; // [y][x]
+  tiles: Tile[][];
   monsters: Monster[];
   items: Item[];
   player: Player;
@@ -65,17 +106,22 @@ export type GameState = {
   attention: number;
   status: "playing" | "dead" | "ascended";
   lastDice: { value: number; outcome: string; label: string } | null;
-  flashes: { x: number; y: number; kind: "hit" | "miss" | "heal"; text: string; id: number }[];
+  flashes: { x: number; y: number; kind: "hit" | "miss" | "heal" | "event"; text: string; id: number }[];
+  isSanctuary: boolean;
+  shop: ShopOffer[] | null;
+  counters: RunCounters;
+  cause: Cause;
+  shakeUntil: number;
+  visitedRooms: Set<number>;
 };
 
 export const TIER_XP = [0, 100, 300, 700, 1500, 3000, 6000];
 export const TIER_NAMES = ["Stirring", "Awakened", "Ascendant", "Sovereign", "Mythic", "Transcendent"];
 
-// ---- RNG (deterministic-ish) ----
+// ---- RNG ----
 let rngSeed = Date.now() >>> 0;
 export function seed(n: number) { rngSeed = n >>> 0 || 1; }
 export function rand() {
-  // mulberry32
   rngSeed = (rngSeed + 0x6D2B79F5) >>> 0;
   let t = rngSeed;
   t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -85,7 +131,44 @@ export function rand() {
 export const ri = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min;
 export const roll = (sides: number) => 1 + Math.floor(rand() * sides);
 
-// ---- Player creation from stored character ----
+// ---- Equipment pool ----
+const WEAPONS: Weapon[] = [
+  { name: "Whisperfang Dagger", die: 6, bonus: 2, tag: "bleed" },
+  { name: "Sundering Maul",     die: 10, bonus: 1 },
+  { name: "Cinder-Etched Blade",die: 8, bonus: 2, tag: "burn" },
+  { name: "Obsidian Saber",     die: 8, bonus: 3 },
+  { name: "Vorpal Edge",        die: 10, bonus: 3, tag: "vorpal" },
+  { name: "Marrow Spear",       die: 8, bonus: 4 },
+];
+
+const ARMORS: Armor[] = [
+  { name: "Tattered Robes",      ac: 1, dr: 0 },
+  { name: "Boiled Leathers",     ac: 2, dr: 1 },
+  { name: "Chitin Carapace",     ac: 3, dr: 1 },
+  { name: "Bone-Plated Harness", ac: 3, dr: 2 },
+  { name: "Veiled Aegis",        ac: 4, dr: 2 },
+];
+
+const TRINKETS: Trinket[] = [
+  { name: "Charm of Banked Coals", effect: "+1 HP regen per turn out of combat", heal: 1 },
+  { name: "Scholar's Sigil",       effect: "+25% XP from kills", xpMult: 1.25 },
+  { name: "Whispering Pendant",    effect: "+1 Focus regen per turn", focusRegen: 1 },
+  { name: "Crow's Eye Locket",     effect: "+50% XP from kills", xpMult: 1.5 },
+];
+
+function pickWeapon(floor: number): Weapon {
+  const tier = Math.min(WEAPONS.length - 1, Math.floor(floor / 2));
+  return { ...WEAPONS[ri(0, tier)] };
+}
+function pickArmor(floor: number): Armor {
+  const tier = Math.min(ARMORS.length - 1, Math.floor(floor / 2));
+  return { ...ARMORS[ri(0, tier)] };
+}
+function pickTrinket(): Trinket {
+  return { ...TRINKETS[ri(0, TRINKETS.length - 1)] };
+}
+
+// ---- Player creation ----
 export function makePlayer(vitals: { vigor: number; focus: number; resolve: number }): Player {
   return {
     x: 0, y: 0,
@@ -105,24 +188,27 @@ export function makePlayer(vitals: { vigor: number; focus: number; resolve: numb
     shards: 0,
     potions: 2,
     elixirs: 1,
+    equipment: { weapon: null, armor: null, trinket: null },
+    statuses: {},
   };
 }
 
 // ---- Dungeon generation ----
-type Room = { x: number; y: number; w: number; h: number };
+type Room = { x: number; y: number; w: number; h: number; visited?: boolean };
 
 export function generateDungeon(width: number, height: number, floor: number, player: Player): GameState {
+  const sanctuary = floor > 1 && floor % 4 === 0;
   const tiles: Tile[][] = Array.from({ length: height }, () =>
     Array.from({ length: width }, () => ({ kind: "wall" as TileKind, seen: false, visible: false }))
   );
 
   const rooms: Room[] = [];
-  const targetRooms = 6 + Math.min(4, floor);
+  const targetRooms = sanctuary ? 3 : 6 + Math.min(4, floor);
   let tries = 0;
   while (rooms.length < targetRooms && tries < 300) {
     tries++;
-    const w = ri(4, 8);
-    const h = ri(3, 6);
+    const w = sanctuary ? ri(5, 7) : ri(4, 8);
+    const h = sanctuary ? ri(4, 6) : ri(3, 6);
     const x = ri(1, width - w - 2);
     const y = ri(1, height - h - 2);
     const r = { x, y, w, h };
@@ -131,7 +217,6 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     carveRoom(tiles, r);
   }
 
-  // connect rooms with L corridors
   for (let i = 1; i < rooms.length; i++) {
     const a = centerOf(rooms[i - 1]);
     const b = centerOf(rooms[i]);
@@ -144,67 +229,185 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     }
   }
 
-  // place player in first room
   const start = centerOf(rooms[0]);
   player.x = start.x;
   player.y = start.y;
 
-  // stairs in last room
   const end = centerOf(rooms[rooms.length - 1]);
   tiles[end.y][end.x].kind = "stairs";
 
-  // monsters in non-first rooms
   const monsters: Monster[] = [];
   const items: Item[] = [];
   let nextId = 1;
 
-  const isBossFloor = floor % 3 === 0;
-  for (let i = 1; i < rooms.length; i++) {
-    const room = rooms[i];
-    const count = ri(1, 2) + (floor >= 2 ? 1 : 0);
-    for (let k = 0; k < count; k++) {
-      const mx = ri(room.x, room.x + room.w - 1);
-      const my = ri(room.y, room.y + room.h - 1);
-      if (mx === end.x && my === end.y) continue;
-      monsters.push(makeMonster(nextId++, mx, my, floor, false));
+  if (sanctuary) {
+    // Place shrine in mid room, chest in last (besides stairs)
+    const mid = centerOf(rooms[1]);
+    tiles[mid.y][mid.x].kind = "shrine";
+    // chest in a corner of last room (not on stairs)
+    const lr = rooms[rooms.length - 1];
+    for (let dy = 0; dy < lr.h; dy++) {
+      for (let dx = 0; dx < lr.w; dx++) {
+        const cx = lr.x + dx;
+        const cy = lr.y + dy;
+        if (cx === end.x && cy === end.y) continue;
+        if (tiles[cy][cx].kind === "floor") {
+          tiles[cy][cx].kind = "chest";
+          dy = lr.h; break;
+        }
+      }
     }
-    if (rand() < 0.45) {
-      const ix = ri(room.x, room.x + room.w - 1);
-      const iy = ri(room.y, room.y + room.h - 1);
-      if (!(ix === end.x && iy === end.y)) items.push(makeItem(nextId++, ix, iy));
+  } else {
+    const isBossFloor = floor % 3 === 0;
+    for (let i = 1; i < rooms.length; i++) {
+      const room = rooms[i];
+      const count = ri(1, 2) + (floor >= 2 ? 1 : 0);
+      for (let k = 0; k < count; k++) {
+        const mx = ri(room.x, room.x + room.w - 1);
+        const my = ri(room.y, room.y + room.h - 1);
+        if (mx === end.x && my === end.y) continue;
+        monsters.push(makeMonster(nextId++, mx, my, floor, false));
+      }
+      if (rand() < 0.45) {
+        const ix = ri(room.x, room.x + room.w - 1);
+        const iy = ri(room.y, room.y + room.h - 1);
+        if (!(ix === end.x && iy === end.y)) items.push(makeItem(nextId++, ix, iy, floor));
+      }
+      // chance for a chest
+      if (rand() < 0.15 + Math.min(0.2, floor * 0.02)) {
+        const cx = ri(room.x, room.x + room.w - 1);
+        const cy = ri(room.y, room.y + room.h - 1);
+        if (tiles[cy][cx].kind === "floor" && !(cx === end.x && cy === end.y)) {
+          tiles[cy][cx].kind = "chest";
+        }
+      }
+      // shrine appears rarely
+      if (rand() < 0.08) {
+        const sx = ri(room.x, room.x + room.w - 1);
+        const sy = ri(room.y, room.y + room.h - 1);
+        if (tiles[sy][sx].kind === "floor") tiles[sy][sx].kind = "shrine";
+      }
     }
-  }
 
-  if (isBossFloor) {
-    monsters.push(makeMonster(nextId++, end.x, end.y - 1 >= 0 ? end.y - 1 : end.y, floor, true));
+    // traps in corridors (not in rooms, not on stairs)
+    const trapCount = Math.min(6, 1 + Math.floor(floor / 2));
+    let placed = 0;
+    let attempts = 0;
+    while (placed < trapCount && attempts < 200) {
+      attempts++;
+      const tx = ri(1, width - 2);
+      const ty = ri(1, height - 2);
+      if (tiles[ty][tx].kind !== "floor") continue;
+      if (tx === end.x && ty === end.y) continue;
+      if (tx === start.x && ty === start.y) continue;
+      // not in a room (only corridor floors)
+      if (rooms.some((r) => tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h)) continue;
+      tiles[ty][tx].kind = "trap";
+      placed++;
+    }
+
+    if (isBossFloor) {
+      monsters.push(makeMonster(nextId++, end.x, end.y - 1 >= 0 ? end.y - 1 : end.y, floor, true));
+    }
   }
 
   const state: GameState = {
     width, height, tiles, monsters, items, player,
     floor, turn: 0,
     log: [
-      { t: "system", m: `Descended to Floor ${floor}.` },
-      { t: "narrative", m: floorNarrative(floor) },
+      { t: "system", m: sanctuary ? `You enter the Sanctuary at Floor ${floor}.` : `Descended to Floor ${floor}.` },
+      { t: "narrative", m: sanctuary ? "Quiet. A shrine glimmers. Coin and oath buy passage here." : floorNarrative(floor) },
     ],
-    attention: 1 + Math.min(8, floor),
+    attention: sanctuary ? 0 : 1 + Math.min(8, floor),
     status: "playing",
     lastDice: null,
     flashes: [],
+    isSanctuary: sanctuary,
+    shop: sanctuary ? makeShop(floor) : null,
+    counters: state_counters_zero(),
+    cause: "unknown",
+    shakeUntil: 0,
+    visitedRooms: new Set([0]),
   };
   recomputeFOV(state);
   return state;
 }
 
-function floorNarrative(f: number) {
-  const lines = [
-    "The torches lean toward you. The dungeon has noticed.",
-    "Damp glyphs pulse on the walls. Something below is humming.",
-    "The air thickens. A heartbeat that is not yours grows louder.",
-    "Bones crackle underfoot. The corridor exhales.",
-    "Veins of obsidian shimmer. The dungeon dreams of you.",
-  ];
-  return lines[(f - 1) % lines.length];
+function state_counters_zero(): RunCounters {
+  return { kills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, shardsEarned: 0 };
 }
+
+function makeShop(floor: number): ShopOffer[] {
+  return [
+    {
+      id: "w",
+      label: "Bind a Weapon",
+      desc: "A blade chooses you.",
+      cost: 40 + floor * 5,
+      kind: "weapon",
+      payload: pickWeapon(floor + 1),
+    },
+    {
+      id: "a",
+      label: "Don Armor",
+      desc: "Hide for your hide.",
+      cost: 35 + floor * 5,
+      kind: "armor",
+      payload: pickArmor(floor + 1),
+    },
+    {
+      id: "t",
+      label: "Trinket of Note",
+      desc: "Small thing. Loud whisper.",
+      cost: 50 + floor * 5,
+      kind: "trinket",
+      payload: pickTrinket(),
+    },
+    {
+      id: "p",
+      label: "Crimson Draughts ×3",
+      desc: "Restore vigor in pinch.",
+      cost: 30,
+      kind: "potions",
+      payload: 3,
+    },
+    {
+      id: "e",
+      label: "Focus Elixirs ×2",
+      desc: "Sharpen the mind.",
+      cost: 25,
+      kind: "elixirs",
+      payload: 2,
+    },
+    {
+      id: "h",
+      label: "Sanctuary Rest",
+      desc: "Restore HP and Focus to full.",
+      cost: 20 + floor * 3,
+      kind: "heal",
+    },
+  ];
+}
+
+const FLOOR_NARRATIVES = [
+  "The torches lean toward you. The dungeon has noticed.",
+  "Damp glyphs pulse on the walls. Something below is humming.",
+  "The air thickens. A heartbeat that is not yours grows louder.",
+  "Bones crackle underfoot. The corridor exhales.",
+  "Veins of obsidian shimmer. The dungeon dreams of you.",
+  "Whispers slither between cracks. They know your name now.",
+  "The dark pools like ink between your steps.",
+];
+function floorNarrative(f: number) { return FLOOR_NARRATIVES[(f - 1) % FLOOR_NARRATIVES.length]; }
+
+const ROOM_EVENTS = [
+  "A cold thought brushes past — not yours.",
+  "Old chains rattle, though nothing moves.",
+  "You taste copper. The wall is sweating.",
+  "Somewhere distant, a door closes that you did not open.",
+  "A child's laugh. Cut short.",
+  "The torches dim a moment, then catch.",
+];
 
 function overlaps(a: Room, b: Room, pad = 0) {
   return !(
@@ -229,7 +432,7 @@ function carveV(tiles: Tile[][], y1: number, y2: number, x: number) {
 }
 
 // ---- Monsters ----
-const MONSTERS: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor">[] = [
+const MONSTERS: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor" | "statuses">[] = [
   { name: "Murk Lurker",    glyph: "g", tone: "arcane", hp: 8,  maxHp: 8,  atk: 4, bonus: 2, ac: 11, xp: 25 },
   { name: "Bone Cur",       glyph: "c", tone: "bone",   hp: 12, maxHp: 12, atk: 5, bonus: 3, ac: 12, xp: 35 },
   { name: "Shade Stalker",  glyph: "s", tone: "arcane", hp: 14, maxHp: 14, atk: 6, bonus: 4, ac: 13, xp: 45 },
@@ -238,7 +441,7 @@ const MONSTERS: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor">[] = [
   { name: "Marrow Knight",  glyph: "K", tone: "bone",   hp: 26, maxHp: 26, atk: 9, bonus: 5, ac: 15, xp: 90 },
 ];
 
-const BOSSES: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor">[] = [
+const BOSSES: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor" | "statuses">[] = [
   { name: "Throne of Maggots",   glyph: "Ψ", tone: "blood",  hp: 60,  maxHp: 60,  atk: 10, bonus: 6, ac: 15, xp: 300, boss: true },
   { name: "The Veiled Sovereign",glyph: "Ω", tone: "arcane", hp: 110, maxHp: 110, atk: 14, bonus: 7, ac: 16, xp: 500, boss: true },
   { name: "Heart of the Mire",   glyph: "Φ", tone: "ember",  hp: 180, maxHp: 180, atk: 18, bonus: 9, ac: 17, xp: 900, boss: true },
@@ -247,7 +450,7 @@ const BOSSES: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor">[] = [
 function makeMonster(id: number, x: number, y: number, floor: number, boss: boolean): Monster {
   if (boss) {
     const b = BOSSES[Math.min(BOSSES.length - 1, Math.floor((floor - 1) / 3))];
-    return { ...b, id, x, y, awake: true, rootedFor: 0 };
+    return { ...b, id, x, y, awake: true, rootedFor: 0, statuses: {} };
   }
   const pool = MONSTERS.slice(0, Math.min(MONSTERS.length, 2 + floor));
   const base = pool[ri(0, pool.length - 1)];
@@ -261,18 +464,24 @@ function makeMonster(id: number, x: number, y: number, floor: number, boss: bool
     bonus: base.bonus + Math.floor(lvl / 2),
     awake: false,
     rootedFor: 0,
+    statuses: {},
   };
 }
 
-function makeItem(id: number, x: number, y: number): Item {
+function makeItem(id: number, x: number, y: number, floor: number): Item {
   const r = rand();
-  if (r < 0.4) return { id, x, y, kind: "potion", amount: 1 };
-  if (r < 0.55) return { id, x, y, kind: "elixir", amount: 1 };
-  if (r < 0.9) return { id, x, y, kind: "gold", amount: ri(5, 25) };
-  return { id, x, y, kind: "shard", amount: 1 };
+  if (r < 0.35) return { id, x, y, kind: "potion", amount: 1 };
+  if (r < 0.50) return { id, x, y, kind: "elixir", amount: 1 };
+  if (r < 0.78) return { id, x, y, kind: "gold", amount: ri(5, 25) };
+  if (r < 0.88) return { id, x, y, kind: "shard", amount: 1 };
+  // equipment drop
+  const eq = rand();
+  if (eq < 0.45) return { id, x, y, kind: "weapon", amount: 1, weapon: pickWeapon(floor) };
+  if (eq < 0.85) return { id, x, y, kind: "armor", amount: 1, armor: pickArmor(floor) };
+  return { id, x, y, kind: "trinket", amount: 1, trinket: pickTrinket() };
 }
 
-// ---- Field of view (simple radius + line-of-sight) ----
+// ---- FOV ----
 const FOV_RADIUS = 7;
 export function recomputeFOV(s: GameState) {
   for (let y = 0; y < s.height; y++)
@@ -289,14 +498,12 @@ export function recomputeFOV(s: GameState) {
       }
     }
   }
-  // wake monsters in view
   for (const m of s.monsters) {
     if (s.tiles[m.y][m.x].visible) m.awake = true;
   }
 }
 
 function lineOfSight(s: GameState, x0: number, y0: number, x1: number, y1: number) {
-  // bresenham; walls block (except the endpoint itself)
   let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
   let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
   let err = dx - dy;
@@ -314,16 +521,19 @@ function lineOfSight(s: GameState, x0: number, y0: number, x1: number, y1: numbe
 function walkable(s: GameState, x: number, y: number) {
   if (x < 0 || y < 0 || x >= s.width || y >= s.height) return false;
   const k = s.tiles[y][x].kind;
-  return k === "floor" || k === "door" || k === "stairs";
+  return k === "floor" || k === "door" || k === "stairs" || k === "shrine" || k === "trap" || k === "chest";
 }
 function monsterAt(s: GameState, x: number, y: number) {
   return s.monsters.find((m) => m.x === x && m.y === y && m.hp > 0);
 }
 function pushLog(s: GameState, e: LogEntry) {
-  s.log = [e, ...s.log].slice(0, 80);
+  s.log = [e, ...s.log].slice(0, 100);
 }
-function flash(s: GameState, x: number, y: number, kind: "hit" | "miss" | "heal", text: string) {
-  s.flashes = [...s.flashes, { x, y, kind, text, id: Date.now() + Math.random() }].slice(-12);
+function flash(s: GameState, x: number, y: number, kind: "hit" | "miss" | "heal" | "event", text: string) {
+  s.flashes = [...s.flashes, { x, y, kind, text, id: Date.now() + Math.random() }].slice(-16);
+}
+function shake(s: GameState, ms: number) {
+  s.shakeUntil = Date.now() + ms;
 }
 
 // ---- Player actions ----
@@ -337,7 +547,8 @@ export function step(s: GameState, dir: MoveDir): GameState {
   const next = clone(s);
   if (dir === "wait") {
     if (!enemyInSight(next)) {
-      next.player.hp = Math.min(next.player.maxHp, next.player.hp + 1);
+      const regen = 1 + (next.player.equipment.trinket?.heal ?? 0);
+      next.player.hp = Math.min(next.player.maxHp, next.player.hp + regen);
       pushLog(next, { t: "narrative", m: "You steady your breath. The dungeon listens." });
     } else {
       pushLog(next, { t: "system", m: "You hold position." });
@@ -358,32 +569,170 @@ export function step(s: GameState, dir: MoveDir): GameState {
   }
   next.player.x = tx;
   next.player.y = ty;
-  // pick up items on this tile
+
+  // pick up items
   const here = next.items.filter((i) => i.x === tx && i.y === ty);
   for (const it of here) pickUp(next, it);
   next.items = next.items.filter((i) => !(i.x === tx && i.y === ty));
-  // stairs?
-  if (next.tiles[ty][tx].kind === "stairs") {
+
+  // tile triggers
+  const tile = next.tiles[ty][tx];
+  if (tile.kind === "trap") {
+    triggerTrap(next, tx, ty);
+  } else if (tile.kind === "chest") {
+    openChest(next, tx, ty);
+  } else if (tile.kind === "shrine") {
+    // shrines remain — player invokes them via action
+    pushLog(next, { t: "event", m: "A shrine pulses with violet light. Stand and pray to invoke it." });
+  } else if (tile.kind === "stairs") {
     pushLog(next, { t: "system", m: `You descend to Floor ${next.floor + 1}.` });
     next.status = "ascended";
     return next;
   }
+
+  // narrative chance on entering an unvisited room area (simple heuristic)
+  if (rand() < 0.04 && !next.isSanctuary) {
+    pushLog(next, { t: "event", m: ROOM_EVENTS[ri(0, ROOM_EVENTS.length - 1)] });
+  }
+
   return endTurn(next);
+}
+
+function triggerTrap(s: GameState, x: number, y: number) {
+  s.tiles[y][x].kind = "floor";
+  s.tiles[y][x].revealed = true;
+  const r = rand();
+  if (r < 0.35) {
+    const dmg = ri(4, 8) + Math.floor(s.floor / 2);
+    const taken = applyDR(s, dmg);
+    s.player.hp -= taken;
+    s.counters.damageTaken += taken;
+    shake(s, 350);
+    flash(s, x, y, "hit", `-${taken}`);
+    pushLog(s, { t: "event", m: `Spike trap! You take ${taken} damage.` });
+    if (s.player.hp <= 0) s.cause = "trap";
+  } else if (r < 0.6) {
+    s.player.statuses.bleed = Math.max(s.player.statuses.bleed ?? 0, 4);
+    flash(s, x, y, "hit", "BLEED");
+    pushLog(s, { t: "event", m: "A wire bites your ankle. You begin to bleed (4 turns)." });
+  } else if (r < 0.8) {
+    s.player.statuses.burn = Math.max(s.player.statuses.burn ?? 0, 3);
+    flash(s, x, y, "hit", "BURN");
+    pushLog(s, { t: "event", m: "Hidden glyph flares — embers cling to you (3 turns)." });
+  } else {
+    s.player.statuses.poison = Math.max(s.player.statuses.poison ?? 0, 5);
+    flash(s, x, y, "hit", "POISON");
+    pushLog(s, { t: "event", m: "A green hiss. Poison seeps in (5 turns)." });
+  }
+}
+
+function openChest(s: GameState, x: number, y: number) {
+  s.tiles[y][x].kind = "floor";
+  const r = rand();
+  if (r < 0.45) {
+    const w = pickWeapon(s.floor + 1);
+    equip(s, "weapon", w);
+    pushLog(s, { t: "loot", m: `Chest yields ${w.name} (1d${w.die}+${w.bonus}${w.tag ? `, ${w.tag}` : ""}). Equipped.` });
+  } else if (r < 0.8) {
+    const a = pickArmor(s.floor + 1);
+    equip(s, "armor", a);
+    pushLog(s, { t: "loot", m: `Chest yields ${a.name} (+${a.ac} AC, ${a.dr} DR). Equipped.` });
+  } else {
+    const t = pickTrinket();
+    equip(s, "trinket", t);
+    pushLog(s, { t: "loot", m: `Chest yields ${t.name}. ${t.effect}. Equipped.` });
+  }
+  flash(s, x, y, "event", "★");
+}
+
+export function invokeShrine(s: GameState): GameState {
+  if (s.status !== "playing") return s;
+  if (s.tiles[s.player.y][s.player.x].kind !== "shrine") {
+    const np = clone(s);
+    pushLog(np, { t: "system", m: "No shrine within reach." });
+    return np;
+  }
+  const next = clone(s);
+  next.tiles[next.player.y][next.player.x].kind = "floor";
+  const r = rand();
+  if (r < 0.4) {
+    const heal = Math.floor(next.player.maxHp * 0.5);
+    const real = Math.min(next.player.maxHp - next.player.hp, heal);
+    next.player.hp += real;
+    flash(next, next.player.x, next.player.y, "heal", `+${real}`);
+    pushLog(next, { t: "event", m: `The shrine answers — half your wounds knit. +${real} HP.` });
+  } else if (r < 0.7) {
+    next.player.statuses.blessed = 12;
+    pushLog(next, { t: "event", m: "Blessed — +2 to strikes for 12 turns." });
+    flash(next, next.player.x, next.player.y, "event", "BLESSED");
+  } else if (r < 0.9) {
+    next.player.maxHp += 4;
+    next.player.hp += 4;
+    pushLog(next, { t: "event", m: "Boon of Stone — +4 Max HP, permanently." });
+  } else {
+    next.player.shards += 1;
+    next.counters.shardsEarned += 1;
+    pushLog(next, { t: "event", m: "The shrine pays a Bloodbound Shard." });
+  }
+  return endTurn(next);
+}
+
+function equip(s: GameState, slot: "weapon" | "armor" | "trinket", v: Weapon | Armor | Trinket) {
+  if (slot === "weapon") {
+    s.player.equipment.weapon = v as Weapon;
+    s.player.weaponDie = (v as Weapon).die;
+    s.player.atkBonus = baseAtk(s) + (v as Weapon).bonus;
+  } else if (slot === "armor") {
+    s.player.equipment.armor = v as Armor;
+    s.player.ac = baseAc(s) + (v as Armor).ac;
+  } else {
+    s.player.equipment.trinket = v as Trinket;
+  }
+}
+
+function baseAtk(s: GameState): number {
+  return Math.max(0, s.player.atkBonus - (s.player.equipment.weapon?.bonus ?? 0)) ;
+}
+function baseAc(s: GameState): number {
+  return s.player.ac - (s.player.equipment.armor?.ac ?? 0);
+}
+
+function applyDR(s: GameState, dmg: number): number {
+  const dr = s.player.equipment.armor?.dr ?? 0;
+  return Math.max(0, dmg - dr);
 }
 
 function pickUp(s: GameState, it: Item) {
   if (it.kind === "potion") { s.player.potions++; pushLog(s, { t: "loot", m: "Picked up a Crimson Draught." }); }
   else if (it.kind === "elixir") { s.player.elixirs++; pushLog(s, { t: "loot", m: "Picked up a Focus Elixir." }); }
-  else if (it.kind === "gold") { s.player.gold += it.amount; pushLog(s, { t: "loot", m: `Found ${it.amount} obols.` }); }
-  else if (it.kind === "shard") { s.player.shards++; pushLog(s, { t: "loot", m: "Found a Bloodbound Shard." }); }
+  else if (it.kind === "gold") { s.player.gold += it.amount; s.counters.goldEarned += it.amount; pushLog(s, { t: "loot", m: `Found ${it.amount} obols.` }); }
+  else if (it.kind === "shard") { s.player.shards++; s.counters.shardsEarned++; pushLog(s, { t: "loot", m: "Found a Bloodbound Shard." }); }
+  else if (it.kind === "weapon" && it.weapon) {
+    const w = it.weapon;
+    equip(s, "weapon", w);
+    pushLog(s, { t: "loot", m: `Equipped ${w.name} (1d${w.die}+${w.bonus}${w.tag ? `, ${w.tag}` : ""}).` });
+  } else if (it.kind === "armor" && it.armor) {
+    const a = it.armor;
+    equip(s, "armor", a);
+    pushLog(s, { t: "loot", m: `Equipped ${a.name} (+${a.ac} AC, ${a.dr} DR).` });
+  } else if (it.kind === "trinket" && it.trinket) {
+    const t = it.trinket;
+    equip(s, "trinket", t);
+    pushLog(s, { t: "loot", m: `Equipped ${t.name}. ${t.effect}.` });
+  }
 }
 
 function attackMonster(s: GameState, m: Monster) {
   const die = roll(20);
-  const total = die + s.player.atkBonus;
+  const blessed = (s.player.statuses.blessed ?? 0) > 0 ? 2 : 0;
+  const total = die + s.player.atkBonus + blessed;
   const crit = die === 20;
   const fumble = die === 1;
-  s.lastDice = { value: die, outcome: crit ? "Critical Success" : fumble ? "Critical Failure" : die >= 15 ? "Great Success" : die >= 8 ? "Success" : "Failure", label: `Strike vs ${m.name}` };
+  s.lastDice = {
+    value: die,
+    outcome: crit ? "Critical Success" : fumble ? "Critical Failure" : die >= 15 ? "Great Success" : die >= 8 ? "Success" : "Failure",
+    label: `Strike vs ${m.name}`,
+  };
   if (fumble) {
     pushLog(s, { t: "roll", m: `Strike · d20 → 1 — your blade slips.` });
     flash(s, m.x, m.y, "miss", "MISS");
@@ -393,12 +742,34 @@ function attackMonster(s: GameState, m: Monster) {
     let dmg = roll(s.player.weaponDie) + s.player.atkBonus + (s.player.buffDmg > 0 ? s.player.buffDmg : 0);
     if (crit) dmg *= 2;
     m.hp -= dmg;
+    s.counters.damageDealt += dmg;
     pushLog(s, { t: "combat", m: `${crit ? "CRIT " : ""}You hit ${m.name} for ${dmg}.` });
     flash(s, m.x, m.y, "hit", `-${dmg}`);
+    // weapon tag procs
+    const tag = s.player.equipment.weapon?.tag;
+    if (tag === "bleed" && rand() < 0.5) {
+      m.statuses.bleed = Math.max(m.statuses.bleed ?? 0, 3);
+      flash(s, m.x, m.y, "hit", "BLEED");
+    } else if (tag === "burn" && rand() < 0.5) {
+      m.statuses.burn = Math.max(m.statuses.burn ?? 0, 3);
+      flash(s, m.x, m.y, "hit", "BURN");
+    } else if (tag === "vorpal" && crit) {
+      m.hp = 0;
+      pushLog(s, { t: "combat", m: `VORPAL — ${m.name} undone.` });
+    }
     if (m.hp <= 0) {
       pushLog(s, { t: "combat", m: `${m.name} crumbles. +${m.xp} XP.` });
-      gainXP(s, m.xp);
-      if (m.boss) { s.player.gold += 100; pushLog(s, { t: "loot", m: "The boss drops 100 obols." }); }
+      const xpMult = s.player.equipment.trinket?.xpMult ?? 1;
+      gainXP(s, Math.round(m.xp * xpMult));
+      s.counters.kills++;
+      if (m.boss) {
+        s.counters.bossKills++;
+        s.player.gold += 100;
+        s.counters.goldEarned += 100;
+        s.player.shards += 1;
+        s.counters.shardsEarned += 1;
+        pushLog(s, { t: "loot", m: "Boss falls — 100 obols and a Shard wrest free." });
+      }
     }
   } else {
     pushLog(s, { t: "combat", m: `Your strike (${total}) glances off ${m.name}'s guard (${m.ac}).` });
@@ -424,22 +795,31 @@ function enemyInSight(s: GameState) {
 }
 
 function endTurn(s: GameState): GameState {
+  // status effects on player (start of turn end)
+  applyStatusesToPlayer(s);
+  if (s.player.hp <= 0) {
+    s.player.hp = 0;
+    s.status = "dead";
+    if (s.cause === "unknown") s.cause = "claws";
+    pushLog(s, { t: "system", m: "Your blood pools at the dungeon's lips. You have fallen." });
+    recomputeFOV(s);
+    return s;
+  }
+
   s.monsters = s.monsters.filter((m) => m.hp > 0);
-  // monster turns
   for (const m of s.monsters) {
+    applyStatusesToMonster(s, m);
+    if (m.hp <= 0) continue;
     if (m.rootedFor > 0) { m.rootedFor--; continue; }
+    if ((m.statuses.rooted ?? 0) > 0) continue;
     const dx = s.player.x - m.x;
     const dy = s.player.y - m.y;
     const dist = Math.abs(dx) + Math.abs(dy);
     if (!m.awake && dist > FOV_RADIUS) continue;
     if (dist === 1) {
-      // attack
       const die = roll(20);
       const total = die + m.bonus;
-      if (die === 1) {
-        pushLog(s, { t: "combat", m: `${m.name} stumbles.` });
-        continue;
-      }
+      if (die === 1) { pushLog(s, { t: "combat", m: `${m.name} stumbles.` }); continue; }
       const targetAC = s.player.ac + (s.player.shield > 0 ? 2 : 0);
       if (die === 20 || total >= targetAC) {
         let dmg = roll(m.atk);
@@ -448,36 +828,84 @@ function endTurn(s: GameState): GameState {
           s.player.shield -= absorbed;
           dmg -= absorbed;
         }
+        dmg = applyDR(s, dmg);
         s.player.hp -= dmg;
+        s.counters.damageTaken += dmg;
+        if (dmg > 0) shake(s, 220);
         pushLog(s, { t: "combat", m: `${m.name} strikes you for ${dmg}.` });
         flash(s, s.player.x, s.player.y, "hit", `-${dmg}`);
+        if (s.player.hp <= 0) s.cause = m.boss ? "boss" : "claws";
       } else {
         pushLog(s, { t: "combat", m: `${m.name} misses (${total} vs ${targetAC}).` });
       }
     } else {
-      // greedy step toward player along walkable cardinal direction
       stepMonsterToward(s, m);
     }
   }
+  s.monsters = s.monsters.filter((m) => m.hp > 0);
   s.turn++;
   if (s.player.buffTurns > 0) {
     s.player.buffTurns--;
     if (s.player.buffTurns === 0) s.player.buffDmg = 0;
   }
+  // trinket focus regen out of combat
+  if (!enemyInSight(s) && s.player.equipment.trinket?.focusRegen) {
+    s.player.focus = Math.min(s.player.maxFocus, s.player.focus + s.player.equipment.trinket.focusRegen);
+  }
   if (s.player.hp <= 0) {
     s.player.hp = 0;
     s.status = "dead";
+    if (s.cause === "unknown") s.cause = "claws";
     pushLog(s, { t: "system", m: "Your blood pools at the dungeon's lips. You have fallen." });
   }
+  decayStatuses(s.player.statuses);
   recomputeFOV(s);
   return s;
 }
 
+function applyStatusesToPlayer(s: GameState) {
+  if ((s.player.statuses.bleed ?? 0) > 0) {
+    const d = applyDR(s, 2);
+    s.player.hp -= d;
+    s.counters.damageTaken += d;
+    flash(s, s.player.x, s.player.y, "hit", `-${d}`);
+  }
+  if ((s.player.statuses.burn ?? 0) > 0) {
+    const d = applyDR(s, 3);
+    s.player.hp -= d;
+    s.counters.damageTaken += d;
+    flash(s, s.player.x, s.player.y, "hit", `-${d}`);
+  }
+  if ((s.player.statuses.poison ?? 0) > 0) {
+    s.player.hp -= 1;
+    s.counters.damageTaken += 1;
+  }
+}
+
+function applyStatusesToMonster(s: GameState, m: Monster) {
+  if ((m.statuses.bleed ?? 0) > 0) { m.hp -= 3; flash(s, m.x, m.y, "hit", "-3"); }
+  if ((m.statuses.burn ?? 0) > 0) { m.hp -= 4; flash(s, m.x, m.y, "hit", "-4"); }
+  if (m.hp <= 0) {
+    pushLog(s, { t: "combat", m: `${m.name} succumbs to its wounds. +${m.xp} XP.` });
+    const xpMult = s.player.equipment.trinket?.xpMult ?? 1;
+    gainXP(s, Math.round(m.xp * xpMult));
+    s.counters.kills++;
+  } else {
+    decayStatuses(m.statuses);
+  }
+}
+
+function decayStatuses(map: StatusMap) {
+  for (const k of Object.keys(map) as StatusKey[]) {
+    const v = map[k] ?? 0;
+    if (v <= 1) delete map[k];
+    else map[k] = v - 1;
+  }
+}
+
 function stepMonsterToward(s: GameState, m: Monster) {
-  const candidates: Array<[number, number]> = [];
   const dx = s.player.x - m.x;
   const dy = s.player.y - m.y;
-  // prefer the dominant axis
   const order: Array<[number, number]> = [];
   if (Math.abs(dx) >= Math.abs(dy)) {
     order.push([Math.sign(dx), 0], [0, Math.sign(dy)], [0, -Math.sign(dy)], [-Math.sign(dx), 0]);
@@ -491,11 +919,8 @@ function stepMonsterToward(s: GameState, m: Monster) {
     if (!walkable(s, nx, ny)) continue;
     if (nx === s.player.x && ny === s.player.y) continue;
     if (s.monsters.some((o) => o.id !== m.id && o.hp > 0 && o.x === nx && o.y === ny)) continue;
-    candidates.push([nx, ny]);
-  }
-  if (candidates.length) {
-    const [nx, ny] = candidates[0];
     m.x = nx; m.y = ny;
+    return;
   }
 }
 
@@ -520,12 +945,7 @@ export function quaffElixir(s: GameState): GameState {
   return endTurn(next);
 }
 
-export type AspectPower = {
-  id: string;
-  label: string;
-  desc: string;
-  cost: number;
-};
+export type AspectPower = { id: string; label: string; desc: string; cost: number };
 
 const POWERS: Record<string, AspectPower> = {
   ruin:      { id: "ruin",       label: "CATACLYSM",      desc: "8 dmg to all adjacent foes.", cost: 4 },
@@ -537,7 +957,7 @@ const POWERS: Record<string, AspectPower> = {
   embers:    { id: "embers",     label: "PHOENIX FLARE",  desc: "Heal 20 HP.", cost: 4 },
   primordial:{ id: "primordial", label: "CARNAL SHAPE",   desc: "+6 damage for 3 turns.", cost: 4 },
   boundstar: { id: "boundstar",  label: "WAGER OF STARS", desc: "Flip fate: double gold or take 6 dmg.", cost: 2 },
-  fury:      { id: "fury",       label: "HEMORRHAGE",     desc: "10 dmg to adjacent foe, ignores armor.", cost: 3 },
+  fury:      { id: "fury",       label: "HEMORRHAGE",     desc: "10 dmg + bleed to adjacent foe.", cost: 3 },
 };
 
 export function powerFor(aspectId: string): AspectPower {
@@ -560,12 +980,13 @@ export function usePower(s: GameState, aspectId: string): GameState {
       if (!adj.length) { pushLog(next, { t: "system", m: "Nothing adjacent to shatter." }); return next; }
       for (const m of adj) { m.hp -= 8; flash(next, m.x, m.y, "hit", "-8"); if (m.hp <= 0) gainXP(next, m.xp); }
       pushLog(next, { t: "combat", m: `CATACLYSM — ${adj.length} foes struck.` });
+      shake(next, 250);
       break;
     }
     case "veils": {
       const t = adj.find((m) => m.hp <= 8);
       if (!t) { pushLog(next, { t: "system", m: "No weakened foe within reach." }); return next; }
-      t.hp = 0; gainXP(next, t.xp);
+      t.hp = 0; gainXP(next, t.xp); next.counters.kills++;
       pushLog(next, { t: "combat", m: `CUT THE THREAD — ${t.name} silenced.` });
       flash(next, t.x, t.y, "hit", "X");
       break;
@@ -577,7 +998,7 @@ export function usePower(s: GameState, aspectId: string): GameState {
       const t = visible[0];
       t.hp -= 12; flash(next, t.x, t.y, "hit", "-12");
       pushLog(next, { t: "combat", m: `MIND SPIKE — ${t.name} reels.` });
-      if (t.hp <= 0) gainXP(next, t.xp);
+      if (t.hp <= 0) { gainXP(next, t.xp); next.counters.kills++; }
       break;
     }
     case "oaths": {
@@ -591,7 +1012,7 @@ export function usePower(s: GameState, aspectId: string): GameState {
       if (!adj.length) { pushLog(next, { t: "system", m: "Command falls on empty air." }); return next; }
       const t = adj[0]; t.hp -= 16; flash(next, t.x, t.y, "hit", "-16");
       pushLog(next, { t: "combat", m: `COMMAND STRIKE — ${t.name} crumples.` });
-      if (t.hp <= 0) gainXP(next, t.xp);
+      if (t.hp <= 0) { gainXP(next, t.xp); next.counters.kills++; }
       break;
     }
     case "chains": {
@@ -615,7 +1036,7 @@ export function usePower(s: GameState, aspectId: string): GameState {
     }
     case "boundstar": {
       if (rand() < 0.5) {
-        const g = ri(20, 60); next.player.gold += g;
+        const g = ri(20, 60); next.player.gold += g; next.counters.goldEarned += g;
         pushLog(next, { t: "loot", m: `WAGER WON — +${g} obols.` });
       } else {
         next.player.hp -= 6; flash(next, next.player.x, next.player.y, "hit", "-6");
@@ -627,12 +1048,41 @@ export function usePower(s: GameState, aspectId: string): GameState {
       const t = adj[0];
       if (!t) { pushLog(next, { t: "system", m: "No throat in reach." }); return next; }
       t.hp -= 10; flash(next, t.x, t.y, "hit", "-10");
+      t.statuses.bleed = Math.max(t.statuses.bleed ?? 0, 4);
       pushLog(next, { t: "combat", m: `HEMORRHAGE — ${t.name} bleeds.` });
-      if (t.hp <= 0) gainXP(next, t.xp);
+      if (t.hp <= 0) { gainXP(next, t.xp); next.counters.kills++; }
       break;
     }
   }
   return endTurn(next);
+}
+
+// ---- Shop ----
+export function buyOffer(s: GameState, offerId: string): GameState {
+  if (!s.shop) return s;
+  const offer = s.shop.find((o) => o.id === offerId);
+  if (!offer) return s;
+  if (s.player.gold < offer.cost) {
+    const np = clone(s);
+    pushLog(np, { t: "system", m: "Not enough obols." });
+    return np;
+  }
+  const next = clone(s);
+  next.player.gold -= offer.cost;
+  switch (offer.kind) {
+    case "weapon": equip(next, "weapon", offer.payload as Weapon); pushLog(next, { t: "loot", m: `Bound to ${(offer.payload as Weapon).name}.` }); break;
+    case "armor":  equip(next, "armor", offer.payload as Armor);  pushLog(next, { t: "loot", m: `Donned ${(offer.payload as Armor).name}.` }); break;
+    case "trinket":equip(next, "trinket", offer.payload as Trinket);pushLog(next, { t: "loot", m: `Bound ${(offer.payload as Trinket).name}.` }); break;
+    case "potions":next.player.potions += offer.payload as number; pushLog(next, { t: "loot", m: `Bought ${offer.payload} Crimson Draughts.` }); break;
+    case "elixirs":next.player.elixirs += offer.payload as number; pushLog(next, { t: "loot", m: `Bought ${offer.payload} Focus Elixirs.` }); break;
+    case "heal":   next.player.hp = next.player.maxHp; next.player.focus = next.player.maxFocus; pushLog(next, { t: "system", m: "Restored to full vitality." }); flash(next, next.player.x, next.player.y, "heal", "FULL"); break;
+    case "shield": next.player.shield += 10; pushLog(next, { t: "system", m: "Warded by sanctuary." }); break;
+  }
+  // remove one-shot offers so they can't be re-bought
+  if (offer.kind === "weapon" || offer.kind === "armor" || offer.kind === "trinket" || offer.kind === "heal") {
+    next.shop = next.shop!.filter((o) => o.id !== offerId);
+  }
+  return next;
 }
 
 function dist(a: { x: number; y: number }, b: { x: number; y: number }) {
@@ -643,10 +1093,13 @@ function clone(s: GameState): GameState {
   return {
     ...s,
     tiles: s.tiles.map((row) => row.map((t) => ({ ...t }))),
-    monsters: s.monsters.map((m) => ({ ...m })),
+    monsters: s.monsters.map((m) => ({ ...m, statuses: { ...m.statuses } })),
     items: s.items.map((i) => ({ ...i })),
-    player: { ...s.player },
+    player: { ...s.player, equipment: { ...s.player.equipment }, statuses: { ...s.player.statuses } },
     log: s.log.slice(),
     flashes: s.flashes.slice(),
+    counters: { ...s.counters },
+    shop: s.shop ? s.shop.slice() : null,
+    visitedRooms: new Set(s.visitedRooms),
   };
 }
