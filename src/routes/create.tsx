@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { saveCharacter } from "@/lib/character-storage";
+import { loadMeta } from "@/lib/meta-storage";
 import {
   ASPECTS,
   RACES,
@@ -181,6 +182,7 @@ function NameStep({ name, setName }: { name: string; setName: (s: string) => voi
 }
 
 function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId: (id: string) => void }) {
+  const unlocked = typeof window !== "undefined" ? loadMeta().unlockedRaces : RACES.map((r) => r.id);
   const race = RACES.find((r) => r.id === raceId);
   return (
     <div className="animate-float-up space-y-6">
@@ -191,11 +193,14 @@ function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {RACES.map((r) => {
           const active = r.id === raceId;
+          const isLocked = !unlocked.includes(r.id);
           return (
             <button
               key={r.id}
-              onClick={() => setRaceId(r.id)}
+              onClick={() => !isLocked && setRaceId(r.id)}
+              disabled={isLocked}
               className={`group relative rounded-sm border p-4 text-left transition-all ${
+                isLocked ? "border-border/40 bg-card/30 opacity-50 cursor-not-allowed" :
                 active
                   ? "border-arcane bg-arcane/10 shadow-arcane"
                   : "border-border bg-card/60 hover:border-arcane/50"
@@ -208,6 +213,9 @@ function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId
                 </div>
                 <span className={`text-2xl ${active ? "text-arcane text-glow animate-flicker" : "text-arcane/60"}`}>{r.sigil}</span>
               </div>
+              {isLocked && (
+                <div className="mt-2 font-display text-[9px] tracking-[0.3em] text-blood">⛓ LOCKED — EARN SHARDS</div>
+              )}
             </button>
           );
         })}
@@ -229,6 +237,7 @@ function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId
 }
 
 function AspectStep({ aspectId, setAspectId }: { aspectId: string | null; setAspectId: (id: string) => void }) {
+  const unlocked = typeof window !== "undefined" ? loadMeta().unlockedAspects : ASPECTS.map((a) => a.id);
   const aspect = ASPECTS.find((a) => a.id === aspectId);
   return (
     <div className="animate-float-up space-y-6">
@@ -239,11 +248,14 @@ function AspectStep({ aspectId, setAspectId }: { aspectId: string | null; setAsp
       <div className="grid gap-3 md:grid-cols-2">
         {ASPECTS.map((a) => {
           const active = a.id === aspectId;
+          const isLocked = !unlocked.includes(a.id);
           return (
             <button
               key={a.id}
-              onClick={() => setAspectId(a.id)}
+              onClick={() => !isLocked && setAspectId(a.id)}
+              disabled={isLocked}
               className={`group rounded-sm border p-4 text-left transition-all ${
+                isLocked ? "border-border/40 bg-card/30 opacity-50 cursor-not-allowed" :
                 active ? "border-arcane bg-arcane/10 shadow-arcane" : "border-border bg-card/60 hover:border-arcane/50"
               }`}
             >
@@ -252,6 +264,9 @@ function AspectStep({ aspectId, setAspectId }: { aspectId: string | null; setAsp
                 <span className={`text-2xl text-${a.color} ${active ? "text-glow animate-flicker" : ""}`}>{a.sigil}</span>
               </div>
               <div className="mt-1 font-serif text-xs italic text-muted-foreground">{a.tagline}</div>
+              {isLocked && (
+                <div className="mt-2 font-display text-[9px] tracking-[0.3em] text-blood">⛓ LOCKED — EARN SHARDS</div>
+              )}
             </button>
           );
         })}

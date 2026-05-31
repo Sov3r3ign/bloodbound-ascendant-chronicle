@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { ASPECTS, RACES, TIERS } from "@/lib/game-data";
 import { loadCharacter, type StoredCharacter } from "@/lib/character-storage";
 import {
+  buyOffer,
   generateDungeon,
+  invokeShrine,
   makePlayer,
   powerFor,
   quaffElixir,
@@ -16,7 +18,10 @@ import {
   usePower,
   type GameState,
   type MoveDir,
+  type ShopOffer,
+  type StatusKey,
 } from "@/lib/dungeon-engine";
+import { loadMeta, nextUnlock, purchaseUnlock, recordRun, type MetaState } from "@/lib/meta-storage";
 
 export const Route = createFileRoute("/dungeon")({
   head: () => ({
@@ -32,12 +37,15 @@ export const Route = createFileRoute("/dungeon")({
 
 const GRID_W = 32;
 const GRID_H = 20;
-const CELL = 22; // px
+const CELL = 22;
 
 function DungeonPage() {
   const [character, setCharacter] = useState<StoredCharacter | null>(null);
   const [game, setGame] = useState<GameState | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [meta, setMeta] = useState<MetaState | null>(null);
+  const [shaking, setShaking] = useState(false);
+  const lastShakeRef = useRef(0);
+  const recordedRef = useRef(false);
 
   // Load character + start
   useEffect(() => {
@@ -45,7 +53,19 @@ function DungeonPage() {
     setCharacter(c);
     const p = makePlayer(c.vitals);
     setGame(generateDungeon(GRID_W, GRID_H, 1, p));
+    setMeta(loadMeta());
   }, []);
+
+  // Trigger screen shake when engine reports new shake
+  useEffect(() => {
+    if (!game) return;
+    if (game.shakeUntil > lastShakeRef.current) {
+      lastShakeRef.current = game.shakeUntil;
+      setShaking(true);
+      const t = setTimeout(() => setShaking(false), 350);
+      return () => clearTimeout(t);
+    }
+  }, [game?.shakeUntil]);
 
   // Keyboard controls
   useEffect(() => {
@@ -65,10 +85,8 @@ function DungeonPage() {
         setGame((g) => (g ? step(g, map[k]) : g));
       } else if (k === "1") { e.preventDefault(); setGame((g) => (g ? quaffPotion(g) : g)); }
       else if (k === "2") { e.preventDefault(); setGame((g) => (g ? quaffElixir(g) : g)); }
-      else if (k === "3" || k === "q") {
-        e.preventDefault();
-        setGame((g) => (g && character ? usePower(g, character.aspectId) : g));
-      }
+      else if (k === "q") { e.preventDefault(); setGame((g) => (g && character ? usePower(g, character.aspectId) : g)); }
+      else if (k === "r") { e.preventDefault(); setGame((g) => (g ? invokeShrine(g) : g)); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -82,9 +100,24 @@ function DungeonPage() {
         const nextFloor = game.floor + 1;
         const p = { ...game.player, x: 0, y: 0 };
         setGame(generateDungeon(GRID_W, GRID_H, nextFloor, p));
-      }, 600);
+      }, 700);
       return () => clearTimeout(t);
     }
+    if (game.status === "dead" && !recordedRef.current) {
+      recordedRef.current = true;
+      const m = recordRun({
+        floor: game.floor,
+        kills: game.counters.kills,
+        bossKills: game.counters.bossKills,
+        gold: game.counters.goldEarned,
+        shards: game.counters.shardsEarned,
+        turns: game.turn,
+        tier: game.player.tier,
+        cause: game.cause,
+      });
+      setMeta(m);
+    }
+    if (game.status === "playing") recordedRef.current = false;
   }, [game, character]);
 
   if (!character || !game) {
@@ -104,6 +137,7 @@ function DungeonPage() {
   const xpForNext = TIER_XP[Math.min(game.player.tier, TIER_XP.length - 1)] ?? 9999;
   const xpForPrev = TIER_XP[Math.max(0, game.player.tier - 1)];
   const xpProgress = game.player.tier >= 6 ? 100 : Math.min(100, Math.round(((game.player.xp - xpForPrev) / (xpForNext - xpForPrev)) * 100));
+  const onShrine = game.tiles[game.player.y][game.player.x].kind === "shrine";
 
   const onCellClick = (x: number, y: number) => {
     if (game.status !== "playing") return;
@@ -114,24 +148,38 @@ function DungeonPage() {
     setGame((g) => (g ? step(g, dir) : g));
   };
 
+  const restart = () => {
+    const p = makePlayer(character.vitals);
+    setGame(generateDungeon(GRID_W, GRID_H, 1, p));
+  };
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <div className="mx-auto max-w-[1500px] px-4 py-6">
+      <div className="mx-auto max-w-[1600px] px-4 py-6">
         {/* HUD top */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="font-display text-[10px] tracking-[0.4em] text-arcane">FLOOR {romanize(game.floor)}</div>
+            <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
+              {game.isSanctuary ? "SANCTUARY · " : ""}FLOOR {romanize(game.floor)}
+            </div>
             <h1 className="font-display text-2xl md:text-3xl text-glow">{character.name}</h1>
             <div className="mt-0.5 font-serif text-sm italic text-muted-foreground">
               {race?.name} · {aspect?.name}
             </div>
           </div>
-          <AttentionMeter value={game.attention} turn={game.turn} />
+          <div className="flex flex-col items-end gap-2">
+            <AttentionMeter value={game.attention} turn={game.turn} sanctuary={game.isSanctuary} />
+            {meta && (
+              <div className="font-mono text-[10px] text-muted-foreground">
+                META · ◇{meta.totalShards} shards · deepest F{meta.deepestFloor} · {meta.totalRuns} runs
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[260px_1fr_320px]">
-          {/* Vitals + inventory */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr_320px]">
+          {/* Left column: vitals + equipment */}
           <RuneFrame className="p-4">
             <div className="font-display text-[10px] tracking-[0.4em] text-arcane">VITALS</div>
             <Bar label="VIGOR" value={game.player.hp} max={game.player.maxHp} tone="blood" />
@@ -142,11 +190,33 @@ function DungeonPage() {
             {game.player.buffDmg > 0 && (
               <div className="mt-1 font-display text-[10px] tracking-widest text-ember">+{game.player.buffDmg} DMG · {game.player.buffTurns}t</div>
             )}
+
+            <StatusBadges statuses={game.player.statuses} />
+
             <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
               <Stat label="AC" v={game.player.ac} />
               <Stat label="ATK+" v={game.player.atkBonus} />
-              <Stat label="d" v={game.player.weaponDie} prefix="1d" />
+              <Stat label="DIE" v={game.player.weaponDie} prefix="d" />
             </div>
+
+            <div className="mt-4 font-display text-[10px] tracking-[0.4em] text-arcane">EQUIPMENT</div>
+            <ul className="mt-2 space-y-1.5 text-xs">
+              <EqRow slot="WEAPON" v={
+                game.player.equipment.weapon
+                  ? `${game.player.equipment.weapon.name} · 1d${game.player.equipment.weapon.die}+${game.player.equipment.weapon.bonus}${game.player.equipment.weapon.tag ? " · " + game.player.equipment.weapon.tag : ""}`
+                  : "Bare fists"
+              } />
+              <EqRow slot="ARMOR" v={
+                game.player.equipment.armor
+                  ? `${game.player.equipment.armor.name} · +${game.player.equipment.armor.ac} AC · ${game.player.equipment.armor.dr} DR`
+                  : "Unarmored"
+              } />
+              <EqRow slot="TRINKET" v={
+                game.player.equipment.trinket
+                  ? `${game.player.equipment.trinket.name} · ${game.player.equipment.trinket.effect}`
+                  : "None"
+              } />
+            </ul>
 
             <div className="mt-4 font-display text-[10px] tracking-[0.4em] text-arcane">INVENTORY</div>
             <ul className="mt-2 space-y-1.5 text-xs">
@@ -166,33 +236,43 @@ function DungeonPage() {
 
           {/* Map */}
           <RuneFrame className="p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="font-display text-[10px] tracking-[0.4em] text-arcane">DUNGEON</div>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
+                {game.isSanctuary ? "THE SANCTUARY" : "THE DUNGEON"}
+              </div>
               <div className="hidden gap-3 text-[10px] font-display tracking-widest text-muted-foreground md:flex">
                 <span><span className="text-arcane">@</span> YOU</span>
                 <span><span className="text-blood">g/c/s</span> FOES</span>
                 <span><span className="text-ember">!</span> POTION</span>
-                <span><span className="text-bone">$</span> LOOT</span>
+                <span><span className="text-bone">◇</span> SHARD</span>
+                <span><span className="text-arcane">▲</span> SHRINE</span>
+                <span><span className="text-ember">⌂</span> CHEST</span>
+                <span><span className="text-blood">×</span> TRAP</span>
                 <span><span className="text-arcane">&gt;</span> STAIRS</span>
               </div>
             </div>
             <div
-              ref={containerRef}
-              className="relative mx-auto select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20"
+              className={`relative mx-auto select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
               style={{ width: GRID_W * CELL, maxWidth: "100%", aspectRatio: `${GRID_W} / ${GRID_H}` }}
             >
               <DungeonGrid game={game} onCellClick={onCellClick} />
+              {/* fog vignette */}
+              <div className="pointer-events-none absolute inset-0 fog-vignette" />
+              {/* player halo */}
+              <div
+                className="pointer-events-none absolute player-halo"
+                style={{
+                  width: CELL * 7,
+                  height: CELL * 7,
+                  left: game.player.x * CELL + CELL / 2 - (CELL * 7) / 2,
+                  top: game.player.y * CELL + CELL / 2 - (CELL * 7) / 2,
+                  transition: "left 0.12s linear, top 0.12s linear",
+                }}
+              />
+
               {/* overlays */}
-              {game.status === "dead" && (
-                <Overlay
-                  title="You Have Fallen"
-                  subtitle="The dungeon drinks deep."
-                  cta="RISE AGAIN"
-                  onClick={() => {
-                    const p = makePlayer(character.vitals);
-                    setGame(generateDungeon(GRID_W, GRID_H, 1, p));
-                  }}
-                />
+              {game.status === "dead" && meta && (
+                <DeathSummary game={game} meta={meta} character={character} onRestart={() => { recordedRef.current = false; restart(); }} onMeta={() => setMeta(loadMeta())} />
               )}
               {game.status === "ascended" && (
                 <Overlay title="The Stair Opens" subtitle={`Floor ${game.floor + 1} awaits…`} />
@@ -206,16 +286,28 @@ function DungeonPage() {
               <ActionBtn label="POTION" hint="[1]" disabled={game.player.potions === 0} onClick={() => setGame((g) => g ? quaffPotion(g) : g)} />
               <ActionBtn label="ELIXIR" hint="[2]" disabled={game.player.elixirs === 0} onClick={() => setGame((g) => g ? quaffElixir(g) : g)} />
               <ActionBtn label={power.label} hint="[Q]" disabled={game.player.focus < power.cost} onClick={() => setGame((g) => g ? usePower(g, character.aspectId) : g)} accent />
+              {onShrine && (
+                <ActionBtn label="INVOKE SHRINE" hint="[R]" onClick={() => setGame((g) => g ? invokeShrine(g) : g)} accent />
+              )}
             </div>
+
+            {/* Shop appears under map on sanctuary floors */}
+            {game.isSanctuary && game.shop && game.status === "playing" && (
+              <ShopPanel
+                offers={game.shop}
+                gold={game.player.gold}
+                onBuy={(id) => setGame((g) => g ? buyOffer(g, id) : g)}
+              />
+            )}
           </RuneFrame>
 
-          {/* Log + ascension */}
+          {/* Right column: dice + log */}
           <RuneFrame className="flex flex-col p-4">
             <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLE</div>
             {game.lastDice && (
-              <div className="mt-2 rounded-sm border border-arcane/40 bg-background/60 p-2 text-center">
+              <div key={game.lastDice.value + "-" + game.turn} className="mt-2 rounded-sm border border-arcane/40 bg-background/60 p-2 text-center">
                 <div className="font-display text-[10px] tracking-widest text-arcane">D20 · {game.lastDice.label}</div>
-                <div className="font-display text-3xl text-glow text-bone">{game.lastDice.value}</div>
+                <div className="font-display text-3xl text-glow text-bone animate-dice-pop">{game.lastDice.value}</div>
                 <div className="font-display text-[10px] tracking-widest text-ember">{game.lastDice.outcome.toUpperCase()}</div>
               </div>
             )}
@@ -227,6 +319,7 @@ function DungeonPage() {
                     entry.t === "narrative" ? "border-arcane/60 bg-arcane/5 font-serif italic text-foreground/90" :
                     entry.t === "combat" ? "border-blood/60 bg-blood/5 font-mono text-blood" :
                     entry.t === "loot" ? "border-ember/60 bg-ember/5 font-mono text-ember" :
+                    entry.t === "event" ? "border-bone/50 bg-bone/5 font-serif italic text-bone" :
                     entry.t === "roll" ? "border-arcane/40 bg-arcane/5 font-mono text-arcane" :
                     "border-border bg-card/40 font-display tracking-wider text-muted-foreground"
                   }`}
@@ -249,6 +342,8 @@ function DungeonPage() {
             </div>
             <div className="font-mono text-xs text-muted-foreground">
               XP {game.player.xp} {game.player.tier < 6 && `/ ${xpForNext}`}
+              <span className="ml-3 text-blood">⚔ {game.counters.kills} kills</span>
+              <span className="ml-3 text-ember">◎ {game.counters.goldEarned} earned</span>
             </div>
           </div>
           <div className="mt-3 grid grid-cols-6 gap-1.5">
@@ -279,7 +374,7 @@ function DungeonPage() {
 function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: number, y: number) => void }) {
   return (
     <div
-      className="grid"
+      className="relative grid"
       style={{
         gridTemplateColumns: `repeat(${game.width}, ${CELL}px)`,
         gridTemplateRows: `repeat(${game.height}, ${CELL}px)`,
@@ -300,11 +395,28 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
           if (tile.seen) {
             if (tile.kind === "wall") {
               bg = "bg-shadow/70";
-              glyph = "";
             } else if (tile.kind === "stairs") {
               bg = "bg-arcane/15";
               glyph = ">";
               tone = "text-arcane text-glow";
+            } else if (tile.kind === "shrine") {
+              bg = "bg-arcane/20";
+              glyph = "▲";
+              tone = "text-arcane text-glow animate-flicker";
+            } else if (tile.kind === "chest") {
+              bg = "bg-ember/15";
+              glyph = "⌂";
+              tone = "text-ember text-glow-ember";
+            } else if (tile.kind === "trap") {
+              if (tile.visible) {
+                bg = "bg-blood/15";
+                glyph = "×";
+                tone = "text-blood";
+              } else {
+                bg = "bg-card/70";
+                glyph = "·";
+                tone = "text-muted-foreground/40";
+              }
             } else {
               bg = tile.visible ? "bg-card/70" : "bg-card/30";
               glyph = "·";
@@ -314,8 +426,13 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
 
           if (tile.visible) {
             if (item) {
-              glyph = item.kind === "potion" ? "!" : item.kind === "elixir" ? "?" : item.kind === "shard" ? "◇" : "$";
-              tone = item.kind === "potion" ? "text-blood" : item.kind === "elixir" ? "text-arcane" : item.kind === "shard" ? "text-bone text-glow" : "text-ember";
+              if (item.kind === "potion") { glyph = "!"; tone = "text-blood"; }
+              else if (item.kind === "elixir") { glyph = "?"; tone = "text-arcane"; }
+              else if (item.kind === "shard") { glyph = "◇"; tone = "text-bone text-glow"; }
+              else if (item.kind === "gold") { glyph = "$"; tone = "text-ember"; }
+              else if (item.kind === "weapon") { glyph = "/"; tone = "text-bone text-glow-ember"; }
+              else if (item.kind === "armor") { glyph = "["; tone = "text-bone text-glow-ember"; }
+              else if (item.kind === "trinket") { glyph = "○"; tone = "text-arcane text-glow"; }
             }
             if (monster) {
               glyph = monster.glyph;
@@ -341,7 +458,13 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
               onClick={() => onCellClick(x, y)}
               className={`relative flex items-center justify-center font-mono text-[14px] leading-none ${bg} ${tone} ${dimUnseen} ${hl}`}
               style={{ width: CELL, height: CELL }}
-              title={monster ? `${monster.name} · ${monster.hp}/${monster.maxHp}` : item ? item.kind : undefined}
+              title={
+                monster ? `${monster.name} · ${monster.hp}/${monster.maxHp}${monsterStatusText(monster.statuses)}`
+                  : item ? itemTitle(item)
+                  : tile.kind === "shrine" ? "Shrine — invoke with [R]"
+                  : tile.kind === "chest" ? "Chest — step onto it"
+                  : undefined
+              }
             >
               {glyph}
               {monster && monster.hp < monster.maxHp && tile.visible && (
@@ -349,21 +472,66 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
                   <div className="h-full bg-blood" style={{ width: `${(monster.hp / monster.maxHp) * 100}%` }} />
                 </div>
               )}
+              {monster && tile.visible && hasStatuses(monster.statuses) && (
+                <div className="absolute -top-0.5 left-0.5 right-0.5 flex gap-0.5">
+                  {(monster.statuses.bleed ?? 0) > 0 && <span className="h-0.5 flex-1 bg-blood" />}
+                  {(monster.statuses.burn ?? 0) > 0 && <span className="h-0.5 flex-1 bg-ember" />}
+                </div>
+              )}
             </div>
           );
         })
       )}
       {/* damage flashes */}
-      {game.flashes.slice(-5).map((f) => (
+      {game.flashes.slice(-8).map((f) => (
         <div
           key={f.id}
-          className={`pointer-events-none absolute font-display text-xs font-bold animate-float-up ${
-            f.kind === "hit" ? "text-blood" : f.kind === "heal" ? "text-ember" : "text-muted-foreground"
+          className={`pointer-events-none absolute font-display text-xs font-bold animate-float-out ${
+            f.kind === "hit" ? "text-blood" : f.kind === "heal" ? "text-ember" : f.kind === "event" ? "text-arcane text-glow" : "text-muted-foreground"
           }`}
-          style={{ left: f.x * CELL + CELL / 2, top: f.y * CELL - 4, transform: "translateX(-50%)" }}
+          style={{ left: f.x * CELL + CELL / 2, top: f.y * CELL - 2, transform: "translateX(-50%)" }}
         >
           {f.text}
         </div>
+      ))}
+    </div>
+  );
+}
+
+function hasStatuses(s: { [k: string]: number | undefined }) {
+  return !!(s.bleed || s.burn || s.poison);
+}
+function monsterStatusText(s: { [k: string]: number | undefined }) {
+  const parts: string[] = [];
+  if (s.bleed) parts.push(`bleed ${s.bleed}`);
+  if (s.burn) parts.push(`burn ${s.burn}`);
+  if (s.poison) parts.push(`poison ${s.poison}`);
+  return parts.length ? ` · ${parts.join(", ")}` : "";
+}
+function itemTitle(it: { kind: string; weapon?: { name: string }; armor?: { name: string }; trinket?: { name: string } }) {
+  if (it.weapon) return `Weapon — ${it.weapon.name}`;
+  if (it.armor) return `Armor — ${it.armor.name}`;
+  if (it.trinket) return `Trinket — ${it.trinket.name}`;
+  return it.kind;
+}
+
+// ---------- Status badges ----------
+const STATUS_META: Record<StatusKey, { label: string; tone: string }> = {
+  bleed:   { label: "BLEED",   tone: "text-blood border-blood/50 bg-blood/10" },
+  burn:    { label: "BURN",    tone: "text-ember border-ember/50 bg-ember/10" },
+  poison:  { label: "POISON",  tone: "text-arcane border-arcane/50 bg-arcane/10" },
+  blessed: { label: "BLESSED", tone: "text-bone border-bone/50 bg-bone/10" },
+  rooted:  { label: "ROOTED",  tone: "text-arcane border-arcane/50 bg-arcane/10" },
+};
+function StatusBadges({ statuses }: { statuses: { [k: string]: number | undefined } }) {
+  const active = (Object.keys(statuses) as StatusKey[]).filter((k) => (statuses[k] ?? 0) > 0);
+  if (!active.length) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {active.map((k) => (
+        <span key={k} className={`rounded-sm border px-1.5 py-0.5 font-display text-[9px] tracking-widest ${STATUS_META[k].tone}`}>
+          {STATUS_META[k].label} · {statuses[k]}
+        </span>
       ))}
     </div>
   );
@@ -408,6 +576,15 @@ function Inv({ label, qty, hint }: { label: string; qty: number; hint?: string }
   );
 }
 
+function EqRow({ slot, v }: { slot: string; v: string }) {
+  return (
+    <li className="rounded-sm border border-border/40 bg-card/40 px-2 py-1.5">
+      <div className="font-display text-[9px] tracking-widest text-arcane">{slot}</div>
+      <div className="font-serif text-[11px] text-foreground/90">{v}</div>
+    </li>
+  );
+}
+
 function ActionBtn({ label, hint, onClick, disabled, accent }: { label: string; hint: string; onClick?: () => void; disabled?: boolean; accent?: boolean }) {
   return (
     <button
@@ -423,16 +600,16 @@ function ActionBtn({ label, hint, onClick, disabled, accent }: { label: string; 
   );
 }
 
-function AttentionMeter({ value, turn }: { value: number; turn: number }) {
+function AttentionMeter({ value, turn, sanctuary }: { value: number; turn: number; sanctuary: boolean }) {
   const pct = Math.min(100, (value / 10) * 100);
   return (
     <div className="w-full max-w-xs">
       <div className="flex items-center justify-between font-display text-[10px] tracking-[0.3em]">
-        <span className="text-arcane">DUNGEON ATTENTION</span>
+        <span className={sanctuary ? "text-arcane" : "text-arcane"}>{sanctuary ? "QUIET HOLDS" : "DUNGEON ATTENTION"}</span>
         <span className="text-blood">{value}/10 · T{turn}</span>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-border/60">
-        <div className="h-full bg-gradient-blood transition-all" style={{ width: `${pct}%` }} />
+        <div className={`h-full ${sanctuary ? "bg-gradient-arcane" : "bg-gradient-blood"} transition-all`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -457,7 +634,164 @@ function Overlay({ title, subtitle, cta, onClick }: { title: string; subtitle: s
   );
 }
 
+// ---------- Shop ----------
+
+function ShopPanel({ offers, gold, onBuy }: { offers: ShopOffer[]; gold: number; onBuy: (id: string) => void }) {
+  return (
+    <div className="mt-4 rounded-sm border border-arcane/40 bg-arcane/5 p-4">
+      <div className="flex items-center justify-between">
+        <div className="font-display text-[10px] tracking-[0.4em] text-arcane">THE SANCTUARY MERCHANT</div>
+        <div className="font-mono text-xs text-ember">PURSE · {gold} obols</div>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {offers.map((o) => {
+          const can = gold >= o.cost;
+          const subtitle = o.kind === "weapon" && o.payload && typeof o.payload === "object"
+            ? `${(o.payload as { name: string }).name}`
+            : o.kind === "armor" && o.payload && typeof o.payload === "object"
+            ? `${(o.payload as { name: string }).name}`
+            : o.kind === "trinket" && o.payload && typeof o.payload === "object"
+            ? `${(o.payload as { name: string }).name}`
+            : o.desc;
+          return (
+            <button
+              key={o.id}
+              onClick={() => can && onBuy(o.id)}
+              disabled={!can}
+              className={`text-left rounded-sm border p-3 transition-all disabled:opacity-40 ${
+                can ? "border-border bg-card/60 hover:border-arcane" : "border-border bg-card/30"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="font-display text-[11px] tracking-widest text-bone">{o.label}</div>
+                <div className="font-mono text-[11px] text-ember">{o.cost}</div>
+              </div>
+              <div className="mt-1 font-serif text-[11px] italic text-muted-foreground">{subtitle}</div>
+              {o.kind === "weapon" && o.payload && typeof o.payload === "object" && "die" in (o.payload as object) && (
+                <div className="mt-1 font-mono text-[10px] text-arcane">
+                  1d{(o.payload as { die: number }).die}+{(o.payload as { bonus: number }).bonus}
+                  {(o.payload as { tag?: string }).tag ? ` · ${(o.payload as { tag: string }).tag}` : ""}
+                </div>
+              )}
+              {o.kind === "armor" && o.payload && typeof o.payload === "object" && "ac" in (o.payload as object) && (
+                <div className="mt-1 font-mono text-[10px] text-arcane">
+                  +{(o.payload as { ac: number }).ac} AC · {(o.payload as { dr: number }).dr} DR
+                </div>
+              )}
+              {o.kind === "trinket" && o.payload && typeof o.payload === "object" && "effect" in (o.payload as object) && (
+                <div className="mt-1 font-mono text-[10px] text-arcane">{(o.payload as { effect: string }).effect}</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Death summary ----------
+
+function DeathSummary({
+  game, meta, character, onRestart, onMeta,
+}: {
+  game: GameState;
+  meta: MetaState;
+  character: StoredCharacter;
+  onRestart: () => void;
+  onMeta: () => void;
+}) {
+  const unlock = useMemo(() => nextUnlock(meta), [meta]);
+  const causeText = useMemo(() => {
+    switch (game.cause) {
+      case "boss": return "Felled by a Sovereign of the Deep.";
+      case "trap": return "Felled by the dungeon's hidden teeth.";
+      case "claws": return "Felled in the press of claws and steel.";
+      case "fate": return "Felled by the Wager of Stars.";
+      default: return "Felled.";
+    }
+  }, [game.cause]);
+
+  const claim = () => {
+    const r = purchaseUnlock();
+    if (r.unlocked) onMeta();
+  };
+
+  return (
+    <div className="absolute inset-0 grid place-items-center overflow-y-auto bg-background/90 backdrop-blur-sm p-4">
+      <div className="max-w-md w-full rounded-sm border border-blood/50 bg-card/80 p-6 shadow-deep">
+        <div className="text-center">
+          <div className="font-display text-[10px] tracking-[0.4em] text-blood">CHRONICLE END</div>
+          <h2 className="mt-2 font-display text-3xl text-glow text-bone">You Have Fallen</h2>
+          <p className="mt-2 font-serif italic text-muted-foreground">{causeText}</p>
+          <p className="mt-1 font-serif italic text-arcane">{character.name}</p>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+          <StatBlock label="FLOOR" value={`${game.floor}`} tone="text-arcane" />
+          <StatBlock label="TIER" value={`${romanize(game.player.tier)}`} tone="text-bone" />
+          <StatBlock label="TURNS" value={`${game.turn}`} tone="text-muted-foreground" />
+          <StatBlock label="KILLS" value={`${game.counters.kills}`} tone="text-blood" />
+          <StatBlock label="BOSSES" value={`${game.counters.bossKills}`} tone="text-blood" />
+          <StatBlock label="OBOLS" value={`${game.counters.goldEarned}`} tone="text-ember" />
+          <StatBlock label="SHARDS" value={`◇${game.counters.shardsEarned}`} tone="text-bone" />
+          <StatBlock label="DEALT" value={`${game.counters.damageDealt}`} tone="text-blood" />
+          <StatBlock label="TAKEN" value={`${game.counters.damageTaken}`} tone="text-arcane" />
+        </div>
+
+        {/* Meta totals */}
+        <div className="mt-5 rounded-sm border border-arcane/30 bg-arcane/5 p-3 text-center">
+          <div className="font-display text-[10px] tracking-[0.4em] text-arcane">YOUR ASHES PERSIST</div>
+          <div className="mt-2 font-mono text-xs text-muted-foreground">
+            ◇ {meta.totalShards} shards · {meta.totalRuns} runs · deepest F{meta.deepestFloor}
+          </div>
+          {unlock ? (
+            <div className="mt-3">
+              <div className="font-display text-[10px] tracking-widest text-bone">
+                NEXT UNLOCK · {unlock.kind === "race" ? "BLOODLINE" : "ASPECT"}
+              </div>
+              <div className="mt-1 font-serif italic text-foreground/90">{unlock.name}</div>
+              <button
+                onClick={claim}
+                disabled={meta.totalShards < unlock.cost}
+                className="mt-2 rounded-sm border border-ember/50 bg-ember/10 px-4 py-1.5 font-display text-[10px] tracking-widest text-ember disabled:opacity-40"
+              >
+                CLAIM · ◇{unlock.cost}
+              </button>
+            </div>
+          ) : (
+            <div className="mt-2 font-serif italic text-arcane">All bloodlines and aspects are yours.</div>
+          )}
+        </div>
+
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={onRestart}
+            className="flex-1 rounded-sm border border-arcane/40 bg-gradient-arcane px-4 py-2 font-display text-[11px] tracking-[0.3em] text-bone shadow-arcane"
+          >
+            RISE AGAIN
+          </button>
+          <Link
+            to="/create"
+            className="flex-1 rounded-sm border border-border bg-card/60 px-4 py-2 text-center font-display text-[11px] tracking-[0.3em] text-foreground/90 hover:border-arcane"
+          >
+            NEW ASCENDANT
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatBlock({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="rounded-sm border border-border/60 bg-background/40 p-2">
+      <div className="font-display text-[9px] tracking-widest text-muted-foreground">{label}</div>
+      <div className={`font-display text-lg ${tone}`}>{value}</div>
+    </div>
+  );
+}
+
 function romanize(n: number) {
-  const r = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+  const r = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV"];
   return r[n - 1] ?? String(n);
 }
