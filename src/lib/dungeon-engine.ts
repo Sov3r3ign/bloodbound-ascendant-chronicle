@@ -679,22 +679,17 @@ export function invokeShrine(s: GameState): GameState {
 
 function equip(s: GameState, slot: "weapon" | "armor" | "trinket", v: Weapon | Armor | Trinket) {
   if (slot === "weapon") {
+    const oldBonus = s.player.equipment.weapon?.bonus ?? 0;
     s.player.equipment.weapon = v as Weapon;
     s.player.weaponDie = (v as Weapon).die;
-    s.player.atkBonus = baseAtk(s) + (v as Weapon).bonus;
+    s.player.atkBonus = Math.max(0, s.player.atkBonus - oldBonus) + (v as Weapon).bonus;
   } else if (slot === "armor") {
+    const oldAc = s.player.equipment.armor?.ac ?? 0;
     s.player.equipment.armor = v as Armor;
-    s.player.ac = baseAc(s) + (v as Armor).ac;
+    s.player.ac = s.player.ac - oldAc + (v as Armor).ac;
   } else {
     s.player.equipment.trinket = v as Trinket;
   }
-}
-
-function baseAtk(s: GameState): number {
-  return Math.max(0, s.player.atkBonus - (s.player.equipment.weapon?.bonus ?? 0)) ;
-}
-function baseAc(s: GameState): number {
-  return s.player.ac - (s.player.equipment.armor?.ac ?? 0);
 }
 
 function applyDR(s: GameState, dmg: number): number {
