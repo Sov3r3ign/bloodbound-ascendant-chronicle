@@ -34,6 +34,8 @@ export type Monster = {
   awake: boolean;
   rootedFor: number;
   statuses: StatusMap;
+  desc: string;
+  seenByPlayer: boolean;
   boss?: boolean;
 };
 
@@ -432,25 +434,25 @@ function carveV(tiles: Tile[][], y1: number, y2: number, x: number) {
 }
 
 // ---- Monsters ----
-const MONSTERS: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor" | "statuses">[] = [
-  { name: "Murk Lurker",    glyph: "g", tone: "arcane", hp: 8,  maxHp: 8,  atk: 4, bonus: 2, ac: 11, xp: 25 },
-  { name: "Bone Cur",       glyph: "c", tone: "bone",   hp: 12, maxHp: 12, atk: 5, bonus: 3, ac: 12, xp: 35 },
-  { name: "Shade Stalker",  glyph: "s", tone: "arcane", hp: 14, maxHp: 14, atk: 6, bonus: 4, ac: 13, xp: 45 },
-  { name: "Blood Acolyte",  glyph: "a", tone: "blood",  hp: 18, maxHp: 18, atk: 7, bonus: 4, ac: 13, xp: 60 },
-  { name: "Ember Wraith",   glyph: "w", tone: "ember",  hp: 16, maxHp: 16, atk: 8, bonus: 5, ac: 14, xp: 70 },
-  { name: "Marrow Knight",  glyph: "K", tone: "bone",   hp: 26, maxHp: 26, atk: 9, bonus: 5, ac: 15, xp: 90 },
+const MONSTERS: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor" | "statuses" | "seenByPlayer">[] = [
+  { name: "Murk Lurker",    glyph: "g", tone: "arcane", hp: 8,  maxHp: 8,  atk: 4, bonus: 2, ac: 11, xp: 25, desc: "A hunched, ink-skinned thing that drips shadow. Its eyes are two slow-blinking coals. It hates light and remembers faces." },
+  { name: "Bone Cur",       glyph: "c", tone: "bone",   hp: 12, maxHp: 12, atk: 5, bonus: 3, ac: 12, xp: 35, desc: "Stitched together from kennel-bones and bridle leather. It still wags the stump of a tail before it lunges." },
+  { name: "Shade Stalker",  glyph: "s", tone: "arcane", hp: 14, maxHp: 14, atk: 6, bonus: 4, ac: 13, xp: 45, desc: "A silhouette that walks a half-second behind itself. Strikes from where you weren't looking. Smells of cold iron." },
+  { name: "Blood Acolyte",  glyph: "a", tone: "blood",  hp: 18, maxHp: 18, atk: 7, bonus: 4, ac: 13, xp: 60, desc: "Robed in arterial red, mouth sewn into a smile. Whispers your true name back at you, slightly wrong each time." },
+  { name: "Ember Wraith",   glyph: "w", tone: "ember",  hp: 16, maxHp: 16, atk: 8, bonus: 5, ac: 14, xp: 70, desc: "A drifting wound of flame and ash. Its passage chars the stones. Burns linger long after the blow lands." },
+  { name: "Marrow Knight",  glyph: "K", tone: "bone",   hp: 26, maxHp: 26, atk: 9, bonus: 5, ac: 15, xp: 90, desc: "A bone-plated revenant cradling a notched greatsword. It bows once, formally, before it tries to halve you." },
 ];
 
-const BOSSES: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor" | "statuses">[] = [
-  { name: "Throne of Maggots",   glyph: "Ψ", tone: "blood",  hp: 60,  maxHp: 60,  atk: 10, bonus: 6, ac: 15, xp: 300, boss: true },
-  { name: "The Veiled Sovereign",glyph: "Ω", tone: "arcane", hp: 110, maxHp: 110, atk: 14, bonus: 7, ac: 16, xp: 500, boss: true },
-  { name: "Heart of the Mire",   glyph: "Φ", tone: "ember",  hp: 180, maxHp: 180, atk: 18, bonus: 9, ac: 17, xp: 900, boss: true },
+const BOSSES: Omit<Monster, "id" | "x" | "y" | "awake" | "rootedFor" | "statuses" | "seenByPlayer">[] = [
+  { name: "Throne of Maggots",   glyph: "Ψ", tone: "blood",  hp: 60,  maxHp: 60,  atk: 10, bonus: 6, ac: 15, xp: 300, boss: true, desc: "A throne of fused corpses, ruled by the squirming crown atop it. The chamber's air tastes of warm copper and wet wool." },
+  { name: "The Veiled Sovereign",glyph: "Ω", tone: "arcane", hp: 110, maxHp: 110, atk: 14, bonus: 7, ac: 16, xp: 500, boss: true, desc: "Seven robes layered over nothing. Where its face should be, the dungeon's own ceiling looks down at you, surprised." },
+  { name: "Heart of the Mire",   glyph: "Φ", tone: "ember",  hp: 180, maxHp: 180, atk: 18, bonus: 9, ac: 17, xp: 900, boss: true, desc: "A vast, slow ember beating in a cage of black roots. Every pulse rewrites a memory you were certain of." },
 ];
 
 function makeMonster(id: number, x: number, y: number, floor: number, boss: boolean): Monster {
   if (boss) {
     const b = BOSSES[Math.min(BOSSES.length - 1, Math.floor((floor - 1) / 3))];
-    return { ...b, id, x, y, awake: true, rootedFor: 0, statuses: {} };
+    return { ...b, id, x, y, awake: true, rootedFor: 0, statuses: {}, seenByPlayer: false };
   }
   const pool = MONSTERS.slice(0, Math.min(MONSTERS.length, 2 + floor));
   const base = pool[ri(0, pool.length - 1)];
@@ -465,6 +467,7 @@ function makeMonster(id: number, x: number, y: number, floor: number, boss: bool
     awake: false,
     rootedFor: 0,
     statuses: {},
+    seenByPlayer: false,
   };
 }
 
