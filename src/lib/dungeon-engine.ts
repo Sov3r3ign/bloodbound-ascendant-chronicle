@@ -502,7 +502,13 @@ export function recomputeFOV(s: GameState) {
     }
   }
   for (const m of s.monsters) {
-    if (s.tiles[m.y][m.x].visible) m.awake = true;
+    if (s.tiles[m.y][m.x].visible) {
+      m.awake = true;
+      if (!m.seenByPlayer) {
+        m.seenByPlayer = true;
+        pushLog(s, { t: "event", m: `${m.boss ? "⚜ " : "▲ "}You behold ${m.name}${m.boss ? ", a Sovereign of this floor" : ""}. ${m.desc}` });
+      }
+    }
   }
 }
 
