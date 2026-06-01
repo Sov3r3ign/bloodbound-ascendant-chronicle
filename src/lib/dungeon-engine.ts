@@ -759,17 +759,20 @@ function attackMonster(s: GameState, m: Monster) {
     outcome: crit ? "Critical Success" : fumble ? "Critical Failure" : die >= 15 ? "Great Success" : die >= 8 ? "Success" : "Failure",
     label: `Strike vs ${m.name}`,
   };
+  const mods = s.player.atkBonus + blessed;
   if (fumble) {
-    pushLog(s, { t: "roll", m: `Strike · d20 → 1 — your blade slips.` });
+    pushLog(s, { t: "roll", m: `Strike · d20 → 1 (+${mods}) vs AC ${m.ac} — your blade slips.` });
     flash(s, m.x, m.y, "miss", "MISS");
     return;
   }
+  pushLog(s, { t: "roll", m: `Strike · d20 → ${die} (+${mods}) = ${total} vs ${m.name} AC ${m.ac}.` });
   if (crit || total >= m.ac) {
-    let dmg = roll(s.player.weaponDie) + s.player.atkBonus + (s.player.buffDmg > 0 ? s.player.buffDmg : 0);
+    const dmgDie = roll(s.player.weaponDie);
+    let dmg = dmgDie + s.player.atkBonus + (s.player.buffDmg > 0 ? s.player.buffDmg : 0);
     if (crit) dmg *= 2;
     m.hp -= dmg;
     s.counters.damageDealt += dmg;
-    pushLog(s, { t: "combat", m: `${crit ? "CRIT " : ""}You hit ${m.name} for ${dmg}.` });
+    pushLog(s, { t: "combat", m: `${crit ? "CRIT! " : ""}Damage · 1d${s.player.weaponDie} → ${dmgDie} (+${s.player.atkBonus}${s.player.buffDmg ? `+${s.player.buffDmg}` : ""})${crit ? " ×2" : ""} = ${dmg} to ${m.name}.` });
     flash(s, m.x, m.y, "hit", `-${dmg}`);
     // weapon tag procs
     const tag = s.player.equipment.weapon?.tag;
