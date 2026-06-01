@@ -499,6 +499,77 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
   );
 }
 
+// ---------- Foes in Sight ----------
+function FoesInSight({ game }: { game: GameState }) {
+  const foes = game.monsters.filter((m) => m.hp > 0 && game.tiles[m.y]?.[m.x]?.visible);
+  if (foes.length === 0) {
+    return (
+      <div className="rounded-sm border border-border/60 bg-card/40 p-3 text-center">
+        <div className="font-display text-[10px] tracking-[0.4em] text-muted-foreground">FOES IN SIGHT</div>
+        <div className="mt-1 font-serif text-[11px] italic text-muted-foreground/70">The dark holds its breath.</div>
+      </div>
+    );
+  }
+  const toneClass = (t: string) =>
+    t === "blood" ? "text-blood border-blood/50" :
+    t === "ember" ? "text-ember border-ember/50" :
+    t === "bone" ? "text-bone border-bone/50" :
+    "text-arcane border-arcane/50";
+  return (
+    <div className="space-y-2">
+      <div className="font-display text-[10px] tracking-[0.4em] text-blood">FOES IN SIGHT · {foes.length}</div>
+      {foes.slice(0, 4).map((m) => {
+        const adjacent =
+          Math.abs(m.x - game.player.x) + Math.abs(m.y - game.player.y) === 1;
+        return (
+          <div
+            key={m.id}
+            className={`rounded-sm border bg-background/60 p-2 ${toneClass(m.tone)} ${adjacent ? "shadow-rune" : ""}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-mono text-lg leading-none">{m.glyph}</span>
+                <span className="truncate font-display text-xs tracking-widest">
+                  {m.boss ? "⚜ " : ""}{m.name.toUpperCase()}
+                </span>
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">AC {m.ac}</span>
+            </div>
+            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-border/60">
+              <div
+                className="h-full bg-blood transition-all"
+                style={{ width: `${Math.max(0, (m.hp / m.maxHp) * 100)}%` }}
+              />
+            </div>
+            <div className="mt-0.5 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
+              <span>{m.hp}/{m.maxHp} HP</span>
+              <span>1d{m.atk} ATK · +{m.bonus}</span>
+            </div>
+            <p className="mt-1.5 font-serif text-[11px] italic leading-snug text-foreground/80">
+              {m.desc}
+            </p>
+            {hasStatuses(m.statuses) && (
+              <div className="mt-1 font-mono text-[10px] text-muted-foreground">
+                {monsterStatusText(m.statuses).replace(/^ · /, "")}
+              </div>
+            )}
+            {adjacent && (
+              <div className="mt-1 font-display text-[9px] tracking-[0.3em] text-blood animate-flicker">
+                ADJACENT — STRIKE TO ATTACK
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {foes.length > 4 && (
+        <div className="text-center font-mono text-[10px] text-muted-foreground">
+          + {foes.length - 4} more lurking…
+        </div>
+      )}
+    </div>
+  );
+}
+
 function hasStatuses(s: { [k: string]: number | undefined }) {
   return !!(s.bleed || s.burn || s.poison);
 }
