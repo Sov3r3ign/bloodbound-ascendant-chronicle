@@ -610,6 +610,21 @@ export function step(s: GameState, dir: MoveDir): GameState {
 function triggerTrap(s: GameState, x: number, y: number) {
   s.tiles[y][x].kind = "floor";
   s.tiles[y][x].revealed = true;
+  // Reflex save: d20 + atkBonus vs DC 12
+  const dc = 12 + Math.floor(s.floor / 2);
+  const die = roll(20);
+  const total = die + s.player.atkBonus;
+  const saved = die !== 1 && (die === 20 || total >= dc);
+  s.lastDice = {
+    value: die,
+    outcome: saved ? (die === 20 ? "Critical Save" : "Reflex Save") : (die === 1 ? "Critical Failure" : "Failed Save"),
+    label: `Reflex vs Trap · DC ${dc}`,
+  };
+  pushLog(s, { t: "roll", m: `Reflex · d20 → ${die} (+${s.player.atkBonus}) vs DC ${dc} — ${saved ? "averted" : "sprung"}.` });
+  if (saved) {
+    pushLog(s, { t: "event", m: "You sense the wire and freeze. The trap clicks empty." });
+    return;
+  }
   const r = rand();
   if (r < 0.35) {
     const dmg = ri(4, 8) + Math.floor(s.floor / 2);
@@ -663,7 +678,14 @@ export function invokeShrine(s: GameState): GameState {
   }
   const next = clone(s);
   next.tiles[next.player.y][next.player.x].kind = "floor";
-  const r = rand();
+  const die = roll(20);
+  next.lastDice = {
+    value: die,
+    outcome: die === 20 ? "Auspicious" : die >= 15 ? "Favored" : die >= 8 ? "Indifferent" : die === 1 ? "Cursed" : "Bleak",
+    label: "Fate · Shrine Invocation",
+  };
+  pushLog(next, { t: "roll", m: `Fate · d20 → ${die} as you press your palm to the shrine.` });
+  const r = die / 20;
   if (r < 0.4) {
     const heal = Math.floor(next.player.maxHp * 0.5);
     const real = Math.min(next.player.maxHp - next.player.hp, heal);
