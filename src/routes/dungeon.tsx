@@ -301,9 +301,10 @@ function DungeonPage() {
             )}
           </RuneFrame>
 
-          {/* Right column: dice + log */}
+          {/* Right column: foes + dice + log */}
           <RuneFrame className="flex flex-col p-4">
-            <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLE</div>
+            <FoesInSight game={game} />
+            <div className="mt-3 font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLE</div>
             {game.lastDice && (
               <div key={game.lastDice.value + "-" + game.turn} className="mt-2 rounded-sm border border-arcane/40 bg-background/60 p-2 text-center">
                 <div className="font-display text-[10px] tracking-widest text-arcane">D20 · {game.lastDice.label}</div>
