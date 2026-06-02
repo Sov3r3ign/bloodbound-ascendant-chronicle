@@ -385,6 +385,15 @@ function DungeonPage() {
           <Link to="/create" className="hover:text-arcane">◆ FORGE A NEW ASCENDANT ◆</Link>
         </div>
       </div>
+
+      {currentEncounter && (
+        <BeastEncounterModal
+          name={currentEncounter}
+          desc={game.monsters.find((m) => m.name === currentEncounter)?.desc ?? ""}
+          isBoss={!!game.monsters.find((m) => m.name === currentEncounter)?.boss}
+          onClose={() => setEncounterQueue((q) => q.slice(1))}
+        />
+      )}
     </div>
   );
 }
