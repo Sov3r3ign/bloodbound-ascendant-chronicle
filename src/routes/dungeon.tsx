@@ -48,23 +48,29 @@ function DungeonPage() {
   const lastShakeRef = useRef(0);
   const recordedRef = useRef(false);
   const seenBeastsRef = useRef<Set<string>>(new Set());
-  const [encounterQueue, setEncounterQueue] = useState<string[]>([]);
+  const [encounterQueue, setEncounterQueue] = useState<{ name: string; level: number }[]>([]);
 
-  // Detect newly-seen beast types and queue their reveal portrait
+  // Trigger reveal portrait only when the beast is in melee proximity (engagement)
   useEffect(() => {
     if (!game) return;
-    const newly: string[] = [];
+    const px = game.player.x;
+    const py = game.player.y;
+    const newly: { name: string; level: number }[] = [];
     for (const m of game.monsters) {
-      if (m.hp <= 0 || !m.seenByPlayer) continue;
+      if (m.hp <= 0) continue;
       if (!beastImage(m.name)) continue;
+      const dist = Math.max(Math.abs(m.x - px), Math.abs(m.y - py));
+      if (dist > 1) continue;
       if (seenBeastsRef.current.has(m.name)) continue;
       seenBeastsRef.current.add(m.name);
-      newly.push(m.name);
+      const level = m.boss ? Math.max(game.floor, 3) + 2 : game.floor;
+      newly.push({ name: m.name, level });
     }
     if (newly.length) setEncounterQueue((q) => [...q, ...newly]);
   }, [game]);
 
   const currentEncounter = encounterQueue[0];
+
 
   // Load character + start
   useEffect(() => {
@@ -388,9 +394,10 @@ function DungeonPage() {
 
       {currentEncounter && (
         <BeastEncounterModal
-          name={currentEncounter}
-          desc={game.monsters.find((m) => m.name === currentEncounter)?.desc ?? ""}
-          isBoss={!!game.monsters.find((m) => m.name === currentEncounter)?.boss}
+          name={currentEncounter.name}
+          level={currentEncounter.level}
+          desc={game.monsters.find((m) => m.name === currentEncounter.name)?.desc ?? ""}
+          isBoss={!!game.monsters.find((m) => m.name === currentEncounter.name)?.boss}
           onClose={() => setEncounterQueue((q) => q.slice(1))}
         />
       )}
@@ -399,7 +406,7 @@ function DungeonPage() {
 }
 
 // ---------- Beast Encounter Modal ----------
-function BeastEncounterModal({ name, desc, isBoss, onClose }: { name: string; desc: string; isBoss: boolean; onClose: () => void }) {
+function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: string; level: number; desc: string; isBoss: boolean; onClose: () => void }) {
   const img = beastImage(name);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -439,9 +446,18 @@ function BeastEncounterModal({ name, desc, isBoss, onClose }: { name: string; de
               {isBoss ? "◆ A SOVEREIGN FOE APPEARS ◆" : "◆ A NEW BEAST APPEARS ◆"}
             </div>
           </div>
+          <div className="absolute right-3 top-10 flex flex-col items-center rounded-sm border border-ember/50 bg-background/80 px-2.5 py-1.5 shadow-rune">
+            <div className="font-display text-[8px] tracking-[0.3em] text-ember">LVL</div>
+            <div className="font-display text-xl leading-none text-glow-ember text-ember">{level}</div>
+          </div>
         </div>
         <div className="p-5">
-          <h2 className="font-display text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
+            <span className={`shrink-0 font-display text-[10px] tracking-widest ${isBoss ? "text-blood" : "text-arcane"}`}>
+              {isBoss ? "BOSS" : "BEAST"} · LVL {level}
+            </span>
+          </div>
           <p className="mt-3 font-serif text-sm italic leading-relaxed text-foreground/85">{desc}</p>
           <button
             onClick={onClose}
