@@ -22,6 +22,7 @@ import {
   type StatusKey,
 } from "@/lib/dungeon-engine";
 import { loadMeta, nextUnlock, purchaseUnlock, recordRun, type MetaState } from "@/lib/meta-storage";
+import { beastImage } from "@/lib/beast-images";
 
 export const Route = createFileRoute("/dungeon")({
   head: () => ({
@@ -46,6 +47,24 @@ function DungeonPage() {
   const [shaking, setShaking] = useState(false);
   const lastShakeRef = useRef(0);
   const recordedRef = useRef(false);
+  const seenBeastsRef = useRef<Set<string>>(new Set());
+  const [encounterQueue, setEncounterQueue] = useState<string[]>([]);
+
+  // Detect newly-seen beast types and queue their reveal portrait
+  useEffect(() => {
+    if (!game) return;
+    const newly: string[] = [];
+    for (const m of game.monsters) {
+      if (m.hp <= 0 || !m.seenByPlayer) continue;
+      if (!beastImage(m.name)) continue;
+      if (seenBeastsRef.current.has(m.name)) continue;
+      seenBeastsRef.current.add(m.name);
+      newly.push(m.name);
+    }
+    if (newly.length) setEncounterQueue((q) => [...q, ...newly]);
+  }, [game]);
+
+  const currentEncounter = encounterQueue[0];
 
   // Load character + start
   useEffect(() => {
