@@ -48,23 +48,29 @@ function DungeonPage() {
   const lastShakeRef = useRef(0);
   const recordedRef = useRef(false);
   const seenBeastsRef = useRef<Set<string>>(new Set());
-  const [encounterQueue, setEncounterQueue] = useState<string[]>([]);
+  const [encounterQueue, setEncounterQueue] = useState<{ name: string; level: number }[]>([]);
 
-  // Detect newly-seen beast types and queue their reveal portrait
+  // Trigger reveal portrait only when the beast is in melee proximity (engagement)
   useEffect(() => {
     if (!game) return;
-    const newly: string[] = [];
+    const px = game.player.x;
+    const py = game.player.y;
+    const newly: { name: string; level: number }[] = [];
     for (const m of game.monsters) {
-      if (m.hp <= 0 || !m.seenByPlayer) continue;
+      if (m.hp <= 0) continue;
       if (!beastImage(m.name)) continue;
+      const dist = Math.max(Math.abs(m.x - px), Math.abs(m.y - py));
+      if (dist > 1) continue;
       if (seenBeastsRef.current.has(m.name)) continue;
       seenBeastsRef.current.add(m.name);
-      newly.push(m.name);
+      const level = m.boss ? Math.max(game.floor, 3) + 2 : game.floor;
+      newly.push({ name: m.name, level });
     }
     if (newly.length) setEncounterQueue((q) => [...q, ...newly]);
   }, [game]);
 
   const currentEncounter = encounterQueue[0];
+
 
   // Load character + start
   useEffect(() => {
