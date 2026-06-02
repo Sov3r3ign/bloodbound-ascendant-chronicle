@@ -398,7 +398,66 @@ function DungeonPage() {
   );
 }
 
+// ---------- Beast Encounter Modal ----------
+function BeastEncounterModal({ name, desc, isBoss, onClose }: { name: string; desc: string; isBoss: boolean; onClose: () => void }) {
+  const img = beastImage(name);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+  if (!img) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm animate-in fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Encounter: ${name}`}
+    >
+      <div
+        className="relative max-w-lg w-full overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative aspect-square w-full overflow-hidden">
+          <img
+            src={img}
+            alt={name}
+            width={1024}
+            height={1024}
+            className="h-full w-full object-cover"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+          <div className="absolute left-0 right-0 top-3 text-center">
+            <div className={`font-display text-[10px] tracking-[0.5em] ${isBoss ? "text-blood" : "text-arcane"} animate-flicker`}>
+              {isBoss ? "◆ A SOVEREIGN FOE APPEARS ◆" : "◆ A NEW BEAST APPEARS ◆"}
+            </div>
+          </div>
+        </div>
+        <div className="p-5">
+          <h2 className="font-display text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
+          <p className="mt-3 font-serif text-sm italic leading-relaxed text-foreground/85">{desc}</p>
+          <button
+            onClick={onClose}
+            className="mt-5 w-full rounded-sm border border-arcane/50 bg-arcane/10 px-4 py-2 font-display text-xs tracking-[0.4em] text-arcane transition-colors hover:bg-arcane/20 hover:text-glow"
+            autoFocus
+          >
+            FACE IT — [SPACE]
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Map renderer ----------
+
 
 function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: number, y: number) => void }) {
   return (
