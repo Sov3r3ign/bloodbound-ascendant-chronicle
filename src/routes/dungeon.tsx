@@ -406,7 +406,7 @@ function DungeonPage() {
 }
 
 // ---------- Beast Encounter Modal ----------
-function BeastEncounterModal({ name, desc, isBoss, onClose }: { name: string; desc: string; isBoss: boolean; onClose: () => void }) {
+function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: string; level: number; desc: string; isBoss: boolean; onClose: () => void }) {
   const img = beastImage(name);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -446,9 +446,18 @@ function BeastEncounterModal({ name, desc, isBoss, onClose }: { name: string; de
               {isBoss ? "◆ A SOVEREIGN FOE APPEARS ◆" : "◆ A NEW BEAST APPEARS ◆"}
             </div>
           </div>
+          <div className="absolute right-3 top-10 flex flex-col items-center rounded-sm border border-ember/50 bg-background/80 px-2.5 py-1.5 shadow-rune">
+            <div className="font-display text-[8px] tracking-[0.3em] text-ember">LVL</div>
+            <div className="font-display text-xl leading-none text-glow-ember text-ember">{level}</div>
+          </div>
         </div>
         <div className="p-5">
-          <h2 className="font-display text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
+            <span className={`shrink-0 font-display text-[10px] tracking-widest ${isBoss ? "text-blood" : "text-arcane"}`}>
+              {isBoss ? "BOSS" : "BEAST"} · LVL {level}
+            </span>
+          </div>
           <p className="mt-3 font-serif text-sm italic leading-relaxed text-foreground/85">{desc}</p>
           <button
             onClick={onClose}
