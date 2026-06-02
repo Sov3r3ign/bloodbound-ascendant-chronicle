@@ -394,9 +394,10 @@ function DungeonPage() {
 
       {currentEncounter && (
         <BeastEncounterModal
-          name={currentEncounter}
-          desc={game.monsters.find((m) => m.name === currentEncounter)?.desc ?? ""}
-          isBoss={!!game.monsters.find((m) => m.name === currentEncounter)?.boss}
+          name={currentEncounter.name}
+          level={currentEncounter.level}
+          desc={game.monsters.find((m) => m.name === currentEncounter.name)?.desc ?? ""}
+          isBoss={!!game.monsters.find((m) => m.name === currentEncounter.name)?.boss}
           onClose={() => setEncounterQueue((q) => q.slice(1))}
         />
       )}
