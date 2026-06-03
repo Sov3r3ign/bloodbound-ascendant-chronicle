@@ -473,16 +473,10 @@ function makeShop(floor: number): ShopOffer[] {
   ];
 }
 
-const FLOOR_NARRATIVES = [
-  "The torches lean toward you. The dungeon has noticed.",
-  "Damp glyphs pulse on the walls. Something below is humming.",
-  "The air thickens. A heartbeat that is not yours grows louder.",
-  "Bones crackle underfoot. The corridor exhales.",
-  "Veins of obsidian shimmer. The dungeon dreams of you.",
-  "Whispers slither between cracks. They know your name now.",
-  "The dark pools like ink between your steps.",
-];
-function floorNarrative(f: number) { return FLOOR_NARRATIVES[(f - 1) % FLOOR_NARRATIVES.length]; }
+function biomeNarrative(b: Biome, floor: number): string {
+  return b.narratives[(floor - 1) % b.narratives.length];
+}
+
 
 const ROOM_EVENTS = [
   "A cold thought brushes past — not yours.",
