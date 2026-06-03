@@ -115,7 +115,87 @@ export type GameState = {
   cause: Cause;
   shakeUntil: number;
   visitedRooms: Set<number>;
+  biomeId: BiomeId;
 };
+
+export type BiomeId = "catacombs" | "foundry" | "veiled" | "mire";
+export type Biome = {
+  id: BiomeId;
+  name: string;
+  subtitle: string;
+  tone: "bone" | "ember" | "arcane" | "blood";
+  accentClass: string;
+  narratives: string[];
+  monsters: string[];
+  bossName: string;
+};
+
+export const BIOMES: Biome[] = [
+  {
+    id: "catacombs",
+    name: "The Catacombs of Aethryn",
+    subtitle: "Crypts beneath a fallen kingdom.",
+    tone: "bone",
+    accentClass: "text-bone",
+    narratives: [
+      "Bone-dust drifts in slow shafts of grey light. The dead lean in to listen.",
+      "Reliquary niches yawn empty. Whatever was stored here let itself out.",
+      "Marble saints weep something darker than water.",
+    ],
+    monsters: ["Murk Lurker", "Bone Cur", "Tomb Wight", "Marrow Knight"],
+    bossName: "Throne of Maggots",
+  },
+  {
+    id: "foundry",
+    name: "The Ember Foundry",
+    subtitle: "Forge-halls of the smith-kings.",
+    tone: "ember",
+    accentClass: "text-ember",
+    narratives: [
+      "Coals breathe in the dark. The bellows pump without hands.",
+      "Slag rivers cool into glyphs you almost recognise.",
+      "Iron sweats in the heat. So do you.",
+    ],
+    monsters: ["Ember Wraith", "Forge-Burnt Husk", "Slag Acolyte", "Marrow Knight"],
+    bossName: "Heart of the Mire",
+  },
+  {
+    id: "veiled",
+    name: "The Veiled Halls",
+    subtitle: "Mirror-archives of a forgotten court.",
+    tone: "arcane",
+    accentClass: "text-arcane",
+    narratives: [
+      "Mirrors line the corridor. Your reflection arrives a step late.",
+      "Velvet ropes cordon nothing. The court is still in session, somewhere behind you.",
+      "Chandeliers burn cold. Each candle is a sealed name.",
+    ],
+    monsters: ["Shade Stalker", "Hollow Scribe", "Mirror Stalker", "Blood Acolyte"],
+    bossName: "The Veiled Sovereign",
+  },
+  {
+    id: "mire",
+    name: "The Blood Mire",
+    subtitle: "The dungeon's living root.",
+    tone: "blood",
+    accentClass: "text-blood",
+    narratives: [
+      "The floor is warm. The floor is breathing.",
+      "Black roots drink from puddles that move when you don't look.",
+      "Everything here remembers being eaten.",
+    ],
+    monsters: ["Blood Acolyte", "Mire-Thrall", "Ember Wraith", "Marrow Knight"],
+    bossName: "Heart of the Mire",
+  },
+];
+
+export function biomeForFloor(floor: number): Biome {
+  if (floor <= 3) return BIOMES[0];
+  if (floor <= 6) return BIOMES[1];
+  if (floor <= 9) return BIOMES[2];
+  return BIOMES[3];
+}
+
 
 export const TIER_XP = [0, 100, 300, 700, 1500, 3000, 6000];
 export const TIER_NAMES = ["Stirring", "Awakened", "Ascendant", "Sovereign", "Mythic", "Transcendent"];
