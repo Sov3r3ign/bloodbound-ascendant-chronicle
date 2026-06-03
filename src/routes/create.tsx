@@ -252,7 +252,14 @@ function AspectStep({ aspectId, setAspectId }: { aspectId: string | null; setAsp
     <div className="animate-float-up space-y-6">
       <div>
         <Eyebrow>III · The Aspect</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl text-glow">Which truth bends to you?</h2>
+        <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+          Which truth bends to you?
+          <InfoTip title="Aspects" size={16}>
+            Your bound power — the metaphysical truth you have made a pact with.
+            Each Aspect grants a Passive (always on), an Active (tactical), and
+            an Ultimate (scene-defining). Choose what you want to become.
+          </InfoTip>
+        </h2>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {ASPECTS.map((a) => {
