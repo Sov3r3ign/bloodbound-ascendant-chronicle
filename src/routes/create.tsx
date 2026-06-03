@@ -522,7 +522,19 @@ function CharacterSheet({
         <div className="text-center">
           <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHARACTER SHEET</div>
           <div className="mt-3 font-display text-xl tracking-wider text-bone min-h-[1.75rem]">{name || "—"}</div>
-          <div className="font-serif text-xs italic text-muted-foreground">Tier I · Stirring Blood</div>
+          <div className="inline-flex items-center justify-center gap-1.5 font-serif text-xs italic text-muted-foreground">
+            Tier I · Stirring Blood
+            <InfoTip title="Ascension Tiers" size={11}>
+              Six tiers of bond with the dungeon — from Stirring Blood to
+              Transcendent. Each step deepens your power and the dungeon's
+              gaze.
+              {TIERS.map((t) => (
+                <span key={t.id} className="mt-1 block">
+                  <span className="text-arcane">Tier {t.id} · {t.name}</span> — {t.desc}
+                </span>
+              ))}
+            </InfoTip>
+          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
