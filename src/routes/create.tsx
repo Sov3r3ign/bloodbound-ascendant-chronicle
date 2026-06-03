@@ -2,12 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
+import { InfoTip } from "@/components/InfoTip";
 import { saveCharacter } from "@/lib/character-storage";
 import { loadMeta } from "@/lib/meta-storage";
 import {
   ASPECTS,
   RACES,
   RESONANCES,
+  TIERS,
   VITAL_MAX,
   VITAL_MIN,
   VITAL_TOTAL,
