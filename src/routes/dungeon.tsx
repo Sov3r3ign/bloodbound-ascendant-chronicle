@@ -5,7 +5,6 @@ import { RuneFrame } from "@/components/RuneFrame";
 import { ASPECTS, RACES, TIERS } from "@/lib/game-data";
 import { loadCharacter, type StoredCharacter } from "@/lib/character-storage";
 import {
-  BIOMES,
   biomeForFloor,
   buyOffer,
   generateDungeon,
