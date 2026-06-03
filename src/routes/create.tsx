@@ -2,12 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
+import { InfoTip } from "@/components/InfoTip";
 import { saveCharacter } from "@/lib/character-storage";
 import { loadMeta } from "@/lib/meta-storage";
 import {
   ASPECTS,
   RACES,
   RESONANCES,
+  TIERS,
   VITAL_MAX,
   VITAL_MIN,
   VITAL_TOTAL,
@@ -188,7 +190,14 @@ function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId
     <div className="animate-float-up space-y-6">
       <div>
         <Eyebrow>II · The Bloodline</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl text-glow">Whose blood runs in you?</h2>
+        <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+          Whose blood runs in you?
+          <InfoTip title="Bloodlines" size={16}>
+            Your ancestral heritage. Each bloodline grants three innate traits that
+            color how you fight, perceive, and endure. Some are locked until you
+            earn shards from the dungeon.
+          </InfoTip>
+        </h2>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {RACES.map((r) => {
@@ -243,7 +252,14 @@ function AspectStep({ aspectId, setAspectId }: { aspectId: string | null; setAsp
     <div className="animate-float-up space-y-6">
       <div>
         <Eyebrow>III · The Aspect</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl text-glow">Which truth bends to you?</h2>
+        <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+          Which truth bends to you?
+          <InfoTip title="Aspects" size={16}>
+            Your bound power — the metaphysical truth you have made a pact with.
+            Each Aspect grants a Passive (always on), an Active (tactical), and
+            an Ultimate (scene-defining). Choose what you want to become.
+          </InfoTip>
+        </h2>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {ASPECTS.map((a) => {
@@ -314,7 +330,14 @@ function ResonanceStep({
       <div className="flex items-end justify-between gap-4">
         <div>
           <Eyebrow>IV · The Resonance</Eyebrow>
-          <h2 className="mt-3 font-display text-3xl text-glow">What does the dungeon feel in you?</h2>
+          <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+            What does the dungeon feel in you?
+            <InfoTip title="Resonances" size={16}>
+              Hungers and quirks the dungeon notices in you. Each grants a Boon
+              and exacts a Cost, and raises Dungeon Attention — the more dots,
+              the harder it watches. Pick 1–3.
+            </InfoTip>
+          </h2>
           <p className="mt-2 font-serif italic text-muted-foreground">Choose 1 to 3. Each pulls the gaze closer.</p>
         </div>
         <div className="font-mono text-sm text-arcane">{resonanceIds.length}/3</div>
@@ -367,7 +390,15 @@ function VitalsStep({
     <div className="animate-float-up space-y-6">
       <div>
         <Eyebrow>V · The Vitals</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl text-glow">Measure your becoming.</h2>
+        <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+          Measure your becoming.
+          <InfoTip title="The Three Pillars" size={16}>
+            Your character rests on three pillars.
+            <span className="mt-1 block"><span className="text-blood">Vigor</span> — flesh, stamina, how much punishment you survive.</span>
+            <span className="block"><span className="text-arcane">Focus</span> — magical capacity, concentration, control of your Aspect.</span>
+            <span className="block"><span className="text-ember">Resolve</span> — willpower against fear, madness, and the dungeon's whispers.</span>
+          </InfoTip>
+        </h2>
         <p className="mt-2 font-serif italic text-muted-foreground">
           Distribute {VITAL_TOTAL} points across Vigor, Focus, and Resolve. Min {VITAL_MIN}. Max {VITAL_MAX}.
         </p>
@@ -444,8 +475,17 @@ function OathStep({
         and offer the dungeon <span className="text-blood">{attention}</span> measure{attention === 1 ? "" : "s"} of its attention.
         Let what answers, answer."
       </blockquote>
-      <div className="mt-8 font-display text-[10px] tracking-[0.4em] text-muted-foreground">
+      <div className="mt-8 inline-flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-muted-foreground">
         TIER I · STIRRING BLOOD · INITIATED
+        <InfoTip title="Ascension Tiers" size={12}>
+          Your bond with the dungeon deepens in stages. Each Tier unlocks deeper
+          power and draws sharper attention.
+          {TIERS.map((t) => (
+            <span key={t.id} className="mt-1 block">
+              <span className="text-arcane">Tier {t.id} · {t.name}</span> — {t.desc}
+            </span>
+          ))}
+        </InfoTip>
       </div>
     </RuneFrame>
   );
@@ -482,7 +522,19 @@ function CharacterSheet({
         <div className="text-center">
           <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHARACTER SHEET</div>
           <div className="mt-3 font-display text-xl tracking-wider text-bone min-h-[1.75rem]">{name || "—"}</div>
-          <div className="font-serif text-xs italic text-muted-foreground">Tier I · Stirring Blood</div>
+          <div className="inline-flex items-center justify-center gap-1.5 font-serif text-xs italic text-muted-foreground">
+            Tier I · Stirring Blood
+            <InfoTip title="Ascension Tiers" size={11}>
+              Six tiers of bond with the dungeon — from Stirring Blood to
+              Transcendent. Each step deepens your power and the dungeon's
+              gaze.
+              {TIERS.map((t) => (
+                <span key={t.id} className="mt-1 block">
+                  <span className="text-arcane">Tier {t.id} · {t.name}</span> — {t.desc}
+                </span>
+              ))}
+            </InfoTip>
+          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
