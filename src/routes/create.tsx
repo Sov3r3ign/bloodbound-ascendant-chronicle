@@ -390,7 +390,15 @@ function VitalsStep({
     <div className="animate-float-up space-y-6">
       <div>
         <Eyebrow>V · The Vitals</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl text-glow">Measure your becoming.</h2>
+        <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+          Measure your becoming.
+          <InfoTip title="The Three Pillars" size={16}>
+            Your character rests on three pillars.
+            <span className="mt-1 block"><span className="text-blood">Vigor</span> — flesh, stamina, how much punishment you survive.</span>
+            <span className="block"><span className="text-arcane">Focus</span> — magical capacity, concentration, control of your Aspect.</span>
+            <span className="block"><span className="text-ember">Resolve</span> — willpower against fear, madness, and the dungeon's whispers.</span>
+          </InfoTip>
+        </h2>
         <p className="mt-2 font-serif italic text-muted-foreground">
           Distribute {VITAL_TOTAL} points across Vigor, Focus, and Resolve. Min {VITAL_MIN}. Max {VITAL_MAX}.
         </p>
