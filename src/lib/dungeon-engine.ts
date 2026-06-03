@@ -393,12 +393,13 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     }
   }
 
+  const biome = biomeForFloor(floor);
   const state: GameState = {
     width, height, tiles, monsters, items, player,
     floor, turn: 0,
     log: [
-      { t: "system", m: sanctuary ? `You enter the Sanctuary at Floor ${floor}.` : `Descended to Floor ${floor}.` },
-      { t: "narrative", m: sanctuary ? "Quiet. A shrine glimmers. Coin and oath buy passage here." : floorNarrative(floor) },
+      { t: "system", m: sanctuary ? `You enter the Sanctuary at Floor ${floor}.` : `Descended to Floor ${floor} — ${biome.name}.` },
+      { t: "narrative", m: sanctuary ? "Quiet. A shrine glimmers. Coin and oath buy passage here." : biomeNarrative(biome, floor) },
     ],
     attention: sanctuary ? 0 : 1 + Math.min(8, floor),
     status: "playing",
@@ -410,6 +411,7 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     cause: "unknown",
     shakeUntil: 0,
     visitedRooms: new Set([0]),
+    biomeId: biome.id,
   };
   recomputeFOV(state);
   return state;
