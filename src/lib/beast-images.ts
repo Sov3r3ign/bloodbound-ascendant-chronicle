@@ -9,12 +9,23 @@ import veiledSovereign from "@/assets/beasts/veiled-sovereign.jpg";
 import heartOfMire from "@/assets/beasts/heart-of-mire.jpg";
 
 export const BEAST_IMAGES: Record<string, string> = {
+  // Catacombs
   "Murk Lurker": murkLurker,
   "Bone Cur": boneCur,
-  "Shade Stalker": shadeStalker,
-  "Blood Acolyte": bloodAcolyte,
-  "Ember Wraith": emberWraith,
+  "Tomb Wight": boneCur,
   "Marrow Knight": marrowKnight,
+  // Foundry
+  "Ember Wraith": emberWraith,
+  "Forge-Burnt Husk": emberWraith,
+  "Slag Acolyte": bloodAcolyte,
+  // Veiled Halls
+  "Shade Stalker": shadeStalker,
+  "Hollow Scribe": shadeStalker,
+  "Mirror Stalker": shadeStalker,
+  "Blood Acolyte": bloodAcolyte,
+  // Mire
+  "Mire-Thrall": bloodAcolyte,
+  // Bosses
   "Throne of Maggots": throneOfMaggots,
   "The Veiled Sovereign": veiledSovereign,
   "Heart of the Mire": heartOfMire,
@@ -23,3 +34,4 @@ export const BEAST_IMAGES: Record<string, string> = {
 export function beastImage(name: string): string | undefined {
   return BEAST_IMAGES[name];
 }
+

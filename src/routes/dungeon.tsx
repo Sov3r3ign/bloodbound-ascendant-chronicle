@@ -5,6 +5,7 @@ import { RuneFrame } from "@/components/RuneFrame";
 import { ASPECTS, RACES, TIERS } from "@/lib/game-data";
 import { loadCharacter, type StoredCharacter } from "@/lib/character-storage";
 import {
+  biomeForFloor,
   buyOffer,
   generateDungeon,
   invokeShrine,
@@ -185,12 +186,12 @@ function DungeonPage() {
         {/* HUD top */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
-              {game.isSanctuary ? "SANCTUARY · " : ""}FLOOR {romanize(game.floor)}
+            <div className={`font-display text-[10px] tracking-[0.4em] ${biomeForFloor(game.floor).accentClass}`}>
+              {game.isSanctuary ? "SANCTUARY · " : ""}FLOOR {romanize(game.floor)} · {biomeForFloor(game.floor).name.toUpperCase()}
             </div>
             <h1 className="font-display text-2xl md:text-3xl text-glow">{character.name}</h1>
             <div className="mt-0.5 font-serif text-sm italic text-muted-foreground">
-              {race?.name} · {aspect?.name}
+              {race?.name} · {aspect?.name} <span className="text-muted-foreground/60">·</span> <span className="italic">{biomeForFloor(game.floor).subtitle}</span>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
