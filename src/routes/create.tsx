@@ -190,7 +190,14 @@ function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId
     <div className="animate-float-up space-y-6">
       <div>
         <Eyebrow>II · The Bloodline</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl text-glow">Whose blood runs in you?</h2>
+        <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+          Whose blood runs in you?
+          <InfoTip title="Bloodlines" size={16}>
+            Your ancestral heritage. Each bloodline grants three innate traits that
+            color how you fight, perceive, and endure. Some are locked until you
+            earn shards from the dungeon.
+          </InfoTip>
+        </h2>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {RACES.map((r) => {
