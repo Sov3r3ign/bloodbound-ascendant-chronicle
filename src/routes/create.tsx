@@ -330,7 +330,14 @@ function ResonanceStep({
       <div className="flex items-end justify-between gap-4">
         <div>
           <Eyebrow>IV · The Resonance</Eyebrow>
-          <h2 className="mt-3 font-display text-3xl text-glow">What does the dungeon feel in you?</h2>
+          <h2 className="mt-3 flex items-center gap-2 font-display text-3xl text-glow">
+            What does the dungeon feel in you?
+            <InfoTip title="Resonances" size={16}>
+              Hungers and quirks the dungeon notices in you. Each grants a Boon
+              and exacts a Cost, and raises Dungeon Attention — the more dots,
+              the harder it watches. Pick 1–3.
+            </InfoTip>
+          </h2>
           <p className="mt-2 font-serif italic text-muted-foreground">Choose 1 to 3. Each pulls the gaze closer.</p>
         </div>
         <div className="font-mono text-sm text-arcane">{resonanceIds.length}/3</div>
