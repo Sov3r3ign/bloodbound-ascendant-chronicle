@@ -475,8 +475,17 @@ function OathStep({
         and offer the dungeon <span className="text-blood">{attention}</span> measure{attention === 1 ? "" : "s"} of its attention.
         Let what answers, answer."
       </blockquote>
-      <div className="mt-8 font-display text-[10px] tracking-[0.4em] text-muted-foreground">
+      <div className="mt-8 inline-flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-muted-foreground">
         TIER I · STIRRING BLOOD · INITIATED
+        <InfoTip title="Ascension Tiers" size={12}>
+          Your bond with the dungeon deepens in stages. Each Tier unlocks deeper
+          power and draws sharper attention.
+          {TIERS.map((t) => (
+            <span key={t.id} className="mt-1 block">
+              <span className="text-arcane">Tier {t.id} · {t.name}</span> — {t.desc}
+            </span>
+          ))}
+        </InfoTip>
       </div>
     </RuneFrame>
   );
