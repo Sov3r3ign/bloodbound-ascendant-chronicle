@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
+import { PrologueModal } from "@/components/PrologueModal";
 import { ASPECTS, RACES, RESONANCES, TIERS } from "@/lib/game-data";
 
 export const Route = createFileRoute("/")({
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="min-h-screen">
+      <PrologueModal />
       <SiteHeader />
 
       {/* Hero */}
