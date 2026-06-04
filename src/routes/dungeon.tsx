@@ -414,6 +414,15 @@ function DungeonPage() {
           onClose={() => setEncounterQueue((q) => q.slice(1))}
         />
       )}
+
+      {floorIntro && (
+        <FloorIntroModal
+          floor={floorIntro.floor}
+          isSanctuary={floorIntro.isSanctuary}
+          onChoice={(c: FloorChoice) => setGame((g) => (g ? applyFloorChoice(g, c) : g))}
+          onClose={() => setFloorIntro(null)}
+        />
+      )}
     </div>
   );
 }
