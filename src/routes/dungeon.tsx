@@ -24,6 +24,8 @@ import {
 } from "@/lib/dungeon-engine";
 import { loadMeta, nextUnlock, purchaseUnlock, recordRun, type MetaState } from "@/lib/meta-storage";
 import { beastImage } from "@/lib/beast-images";
+import { FloorIntroModal } from "@/components/FloorIntroModal";
+import { applyFloorChoice, type FloorChoice } from "@/lib/floor-events";
 
 export const Route = createFileRoute("/dungeon")({
   head: () => ({
@@ -50,6 +52,16 @@ function DungeonPage() {
   const recordedRef = useRef(false);
   const seenBeastsRef = useRef<Set<string>>(new Set());
   const [encounterQueue, setEncounterQueue] = useState<{ name: string; level: number }[]>([]);
+  const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean } | null>(null);
+  const lastIntroFloorRef = useRef<number>(-1);
+
+  // Show floor intro modal whenever we arrive on a new floor
+  useEffect(() => {
+    if (!game) return;
+    if (game.floor === lastIntroFloorRef.current) return;
+    lastIntroFloorRef.current = game.floor;
+    setFloorIntro({ floor: game.floor, isSanctuary: game.isSanctuary });
+  }, [game?.floor]);
 
   // Trigger reveal portrait only when the beast is in melee proximity (engagement)
   useEffect(() => {
@@ -400,6 +412,15 @@ function DungeonPage() {
           desc={game.monsters.find((m) => m.name === currentEncounter.name)?.desc ?? ""}
           isBoss={!!game.monsters.find((m) => m.name === currentEncounter.name)?.boss}
           onClose={() => setEncounterQueue((q) => q.slice(1))}
+        />
+      )}
+
+      {floorIntro && (
+        <FloorIntroModal
+          floor={floorIntro.floor}
+          isSanctuary={floorIntro.isSanctuary}
+          onChoice={(c: FloorChoice) => setGame((g) => (g ? applyFloorChoice(g, c) : g))}
+          onClose={() => setFloorIntro(null)}
         />
       )}
     </div>
