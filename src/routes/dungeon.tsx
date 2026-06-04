@@ -268,6 +268,26 @@ function DungeonPage() {
               <Inv label="Bloodbound Shards" qty={game.player.shards} />
             </ul>
 
+            {(saga.blessings.length > 0 || saga.curses.length > 0) && (
+              <>
+                <div className="mt-4 font-display text-[10px] tracking-[0.4em] text-arcane">SAGA</div>
+                <ul className="mt-2 space-y-1.5 text-xs">
+                  {saga.blessings.map((b) => (
+                    <li key={b.id} className="rounded-sm border border-ember/40 bg-ember/5 px-2 py-1">
+                      <div className="font-display text-[10px] tracking-widest text-ember">✦ {b.name.toUpperCase()}</div>
+                      <div className="mt-0.5 font-serif text-[11px] italic text-muted-foreground">{b.desc}</div>
+                    </li>
+                  ))}
+                  {saga.curses.map((c) => (
+                    <li key={c.id} className="rounded-sm border border-blood/40 bg-blood/5 px-2 py-1">
+                      <div className="font-display text-[10px] tracking-widest text-blood">✖ {c.name.toUpperCase()}</div>
+                      <div className="mt-0.5 font-serif text-[11px] italic text-muted-foreground">{c.desc}</div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
             <div className="mt-4 rounded-sm border border-arcane/30 bg-arcane/5 p-3">
               <div className="font-display text-[10px] tracking-widest text-arcane">ASPECT POWER · [Q]</div>
               <div className="mt-1 font-display text-sm tracking-wider text-bone">{power.label}</div>
