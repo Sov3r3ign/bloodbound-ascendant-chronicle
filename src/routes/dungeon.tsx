@@ -421,7 +421,15 @@ function DungeonPage() {
         <FloorIntroModal
           floor={floorIntro.floor}
           isSanctuary={floorIntro.isSanctuary}
-          onChoice={(c: FloorChoice) => setGame((g) => (g ? applyFloorChoice(g, c) : g))}
+          saga={saga}
+          onChoice={(c: FloorChoice) => {
+            setGame((g) => {
+              if (!g) return g;
+              const res = applyFloorChoice(g, saga, c);
+              setSaga(res.saga);
+              return res.game;
+            });
+          }}
           onClose={() => setFloorIntro(null)}
         />
       )}
