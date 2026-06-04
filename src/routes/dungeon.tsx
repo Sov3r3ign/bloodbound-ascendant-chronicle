@@ -24,6 +24,8 @@ import {
 } from "@/lib/dungeon-engine";
 import { loadMeta, nextUnlock, purchaseUnlock, recordRun, type MetaState } from "@/lib/meta-storage";
 import { beastImage } from "@/lib/beast-images";
+import { FloorIntroModal } from "@/components/FloorIntroModal";
+import { applyFloorChoice, type FloorChoice } from "@/lib/floor-events";
 
 export const Route = createFileRoute("/dungeon")({
   head: () => ({
