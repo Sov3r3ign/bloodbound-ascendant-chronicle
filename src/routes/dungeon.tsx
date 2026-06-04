@@ -52,6 +52,16 @@ function DungeonPage() {
   const recordedRef = useRef(false);
   const seenBeastsRef = useRef<Set<string>>(new Set());
   const [encounterQueue, setEncounterQueue] = useState<{ name: string; level: number }[]>([]);
+  const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean } | null>(null);
+  const lastIntroFloorRef = useRef<number>(-1);
+
+  // Show floor intro modal whenever we arrive on a new floor
+  useEffect(() => {
+    if (!game) return;
+    if (game.floor === lastIntroFloorRef.current) return;
+    lastIntroFloorRef.current = game.floor;
+    setFloorIntro({ floor: game.floor, isSanctuary: game.isSanctuary });
+  }, [game?.floor]);
 
   // Trigger reveal portrait only when the beast is in melee proximity (engagement)
   useEffect(() => {
