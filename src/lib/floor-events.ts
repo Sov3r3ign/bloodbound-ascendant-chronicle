@@ -1,4 +1,5 @@
 import type { BiomeId, GameState } from "./dungeon-engine";
+import { applySagaDelta, type Saga, type SagaDelta } from "./saga";
 
 export type FloorChoiceEffect = {
   hp?: number;
@@ -19,6 +20,7 @@ export type FloorChoice = {
   hint?: string;
   outcome: string;
   effect: FloorChoiceEffect;
+  saga?: SagaDelta;
 };
 
 export type FloorEvent = {
@@ -27,9 +29,12 @@ export type FloorEvent = {
   npc?: string;
   prompt: string;
   choices: [FloorChoice, FloorChoice];
+  requires?: (s: Saga) => boolean;
+  /** Higher = more likely to be chosen when multiple match. */
+  weight?: number;
 };
 
-// Biome intro flavor — paragraph shown alongside the floor description.
+// ----- Floor intros (atmospheric paragraph) -----
 export const FLOOR_INTROS: Record<BiomeId, string[]> = {
   catacombs: [
     "You step from the stair into a cathedral of bones. Reliquaries line the walls, each labelled in a script that crawls when you read it. The air tastes of old incense and older grief.",
@@ -53,47 +58,140 @@ export const FLOOR_INTROS: Record<BiomeId, string[]> = {
   ],
 };
 
-// Story / NPC events per biome. Choices have small mechanical effects.
+export function pickFloorIntro(biomeId: BiomeId, floor: number, saga: Saga): string {
+  const base = FLOOR_INTROS[biomeId][(floor - 1) % FLOOR_INTROS[biomeId].length];
+  const rep = saga.rep[biomeId] ?? 0;
+  if (rep >= 2) return base + " The biome itself seems to lean toward you, recognising a friend.";
+  if (rep <= -2) return base + " The walls watch you with the particular attention reserved for those who have given offence.";
+  return base;
+}
+
+// ----- Events: branching, with follow-ups gated by saga.flags -----
 const EVENTS: Record<BiomeId, FloorEvent[]> = {
   catacombs: [
+    // — Opening event
     {
       id: "cat-ossuary-keeper",
       title: "The Ossuary Keeper",
       npc: "A bone-thin figure in faded vestments",
       prompt:
         "An old keeper rises from amid the relics. 'Each bone here has a name,' he rasps. 'Speak yours — leave a coin — and the dead may answer.'",
+      requires: (s) => !s.flags.cat_keeper_met,
       choices: [
         {
           label: "Pay 15 obols for a blessing",
-          hint: "−15 gold · +6 HP · +4 Focus",
-          outcome: "He drops your coin into a skull's open mouth. Warmth, briefly, in your chest.",
+          hint: "−15 gold · +6 HP · +4 Focus · favour with the dead",
+          outcome: "He drops your coin into a skull's open mouth. Warmth, briefly, in your chest. 'The bones know your name now.'",
           effect: { gold: -15, hp: 6, focus: 4 },
+          saga: {
+            setFlags: ["cat_keeper_met", "cat_keeper_paid"],
+            rep: { catacombs: 1 },
+            addBlessing: {
+              id: "bone-favour",
+              name: "Bone-Favour",
+              desc: "The Catacombs' dead remember you kindly.",
+            },
+          },
         },
         {
           label: "Spit on the floor and walk on",
-          hint: "+2 ATK · +1 buff round · a curse, perhaps",
+          hint: "+2 buff DMG (4 turns) · the keeper will not forget",
           outcome: "The keeper laughs without humour. 'The dead remember rudeness too.' Your knuckles whiten on your weapon.",
           effect: { buffDmg: 2, buffTurns: 4 },
+          saga: {
+            setFlags: ["cat_keeper_met", "cat_spat"],
+            rep: { catacombs: -1 },
+          },
         },
       ],
     },
+    // — Follow-up: the keeper returns angry
+    {
+      id: "cat-keeper-return",
+      title: "The Keeper Returns",
+      npc: "The same bone-thin keeper, no longer patient",
+      prompt:
+        "He waits in your path with three relic-bone wards already lit. 'I gave you a chance to be remembered well,' he says. 'Now choose again — and pay properly.'",
+      requires: (s) => s.flags.cat_spat && !s.flags.cat_keeper_resolved,
+      weight: 3,
+      choices: [
+        {
+          label: "Apologise — pay 30 obols",
+          hint: "−30 gold · clears the grudge",
+          outcome: "He pockets the coin slowly. 'The bones will forget. Eventually.' The wards gutter out.",
+          effect: { gold: -30 },
+          saga: { setFlags: ["cat_keeper_resolved"], rep: { catacombs: 1 } },
+        },
+        {
+          label: "Refuse him a second time",
+          hint: "−5 HP from a binding ward · Keeper's Mark (curse)",
+          outcome: "A bone-ward strikes you across the ribs. The mark settles deep, faint and humming. 'Carry it,' he says, 'until you mean an apology.'",
+          effect: { hp: -5 },
+          saga: {
+            setFlags: ["cat_keeper_resolved", "cat_keeper_cursed"],
+            rep: { catacombs: -1 },
+            addCurse: {
+              id: "keepers-mark",
+              name: "Keeper's Mark",
+              desc: "The Catacombs' dead are watching for an unpaid debt.",
+            },
+          },
+        },
+      ],
+    },
+    // — Standard saint event
     {
       id: "cat-weeping-saint",
       title: "The Weeping Saint",
-      prompt:
-        "A marble saint weeps black water onto a basin. The water glints like a promise — or a contract.",
+      prompt: "A marble saint weeps black water onto a basin. The water glints like a promise — or a contract.",
+      requires: (s) => !s.flags.cat_saint_met,
       choices: [
         {
           label: "Drink",
           hint: "+8 HP · +1 shield",
           outcome: "It tastes of iron and old apologies. You feel steadied.",
           effect: { hp: 8, shield: 1 },
+          saga: { setFlags: ["cat_saint_met", "cat_drank_tears"], rep: { catacombs: 1 } },
         },
         {
           label: "Pry a tear-bead loose",
-          hint: "+1 shard · −3 HP",
+          hint: "+1 shard · −3 HP · the saint remembers",
           outcome: "The saint's stone hand grips your wrist for an instant. You leave with the bead and a thin cut.",
           effect: { shards: 1, hp: -3 },
+          saga: { setFlags: ["cat_saint_met", "cat_pried"], rep: { catacombs: -2 } },
+        },
+      ],
+    },
+    // — Follow-up if you stole from the saint
+    {
+      id: "cat-saint-debt",
+      title: "The Saint's Debt",
+      prompt:
+        "The marble saint stands in your way this time — she has walked here from her plinth. Her hand is open. She does not weep now.",
+      requires: (s) => s.flags.cat_pried && !s.flags.cat_saint_paid,
+      weight: 3,
+      choices: [
+        {
+          label: "Return the bead — pay 1 shard",
+          hint: "−1 shard · +10 HP · forgiveness",
+          outcome: "She closes her fingers around the bead. Her stone face softens into something almost grateful. You feel mended.",
+          effect: { shards: -1, hp: 10 },
+          saga: {
+            setFlags: ["cat_saint_paid"],
+            rep: { catacombs: 2 },
+            addBlessing: {
+              id: "saints-pardon",
+              name: "Saint's Pardon",
+              desc: "Forgiven by the weeping saint.",
+            },
+          },
+        },
+        {
+          label: "Shoulder past her",
+          hint: "−6 HP from her stone grip",
+          outcome: "Her hand closes on your shoulder hard enough to bruise bone. She lets you pass, but her eyes follow.",
+          effect: { hp: -6 },
+          saga: { setFlags: ["cat_saint_paid"], rep: { catacombs: -1 } },
         },
       ],
     },
@@ -106,18 +204,55 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       npc: "A child shape, all ash, with cinder-bright eyes",
       prompt:
         "A small figure crouches by a cold forge, drawing futures in the ash. 'Pick a coal,' she says. 'One burns. One sings.'",
+      requires: (s) => !s.flags.fo_prophet_met,
       choices: [
         {
           label: "Take the singing coal",
-          hint: "+1 ATK bonus",
+          hint: "+1 ATK bonus · she will offer again",
           outcome: "It hums against your palm and sinks beneath your skin. Your strikes feel surer.",
           effect: { atkBonus: 1 },
+          saga: { setFlags: ["fo_prophet_met", "fo_singing_coal"], rep: { foundry: 1 } },
         },
         {
           label: "Take the burning coal",
           hint: "−4 HP · +2 shards",
           outcome: "It scars your hand on the way into your pocket. Two bloodbound shards stay behind in the ash.",
           effect: { hp: -4, shards: 2 },
+          saga: { setFlags: ["fo_prophet_met", "fo_burning_coal"] },
+        },
+      ],
+    },
+    // — Follow-up: the prophet returns
+    {
+      id: "fo-prophet-return",
+      title: "The Prophet, Again",
+      npc: "The ash-child, eyes a little brighter now",
+      prompt:
+        "She is sitting on the same dead forge, as if she walked here on the same step you did. 'The coal still sings,' she says. 'Will you let it bring its choir?'",
+      requires: (s) => s.flags.fo_singing_coal && !s.flags.fo_choir,
+      weight: 3,
+      choices: [
+        {
+          label: "Yes — let the choir come",
+          hint: "+1 ATK · +1 shard · marked by the foundry",
+          outcome: "Heat blooms inside your chest. You hear, for one moment, a great many voices agreeing.",
+          effect: { atkBonus: 1, shards: 1 },
+          saga: {
+            setFlags: ["fo_choir"],
+            rep: { foundry: 2 },
+            addBlessing: {
+              id: "coal-choir",
+              name: "Coal-Choir",
+              desc: "The Foundry's old fires sing through your strikes.",
+            },
+          },
+        },
+        {
+          label: "No — quench the coal",
+          hint: "−1 ATK · +20 gold returned to you",
+          outcome: "She nods, sad and small. The hum inside you dies. A handful of obols rolls from the cold forge, as if in apology.",
+          effect: { atkBonus: -1, gold: 20 },
+          saga: { setFlags: ["fo_choir"] },
         },
       ],
     },
@@ -126,18 +261,52 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       title: "The Bellows-Pact",
       prompt:
         "A forge ignites at your approach. A voice in the flame: 'Feed me, and I will arm you. Refuse, and I will remember.'",
+      requires: (s) => !s.flags.fo_bellows_met,
       choices: [
         {
           label: "Feed it 20 obols",
           hint: "−20 gold · +2 buff DMG · 6 turns",
           outcome: "Your weapon edge glows briefly orange. The forge sighs, satisfied.",
           effect: { gold: -20, buffDmg: 2, buffTurns: 6 },
+          saga: { setFlags: ["fo_bellows_met", "fo_bellows_fed"], rep: { foundry: 1 } },
         },
         {
           label: "Refuse",
-          hint: "+1 elixir scavenged from the rubble",
+          hint: "+1 elixir from the rubble · the forge will remember",
           outcome: "The fire dims. You find a focus elixir in the ashpit on your way past — unrelated, surely.",
           effect: { elixirs: 1 },
+          saga: { setFlags: ["fo_bellows_met", "fo_refused_bellows"], rep: { foundry: -1 } },
+        },
+      ],
+    },
+    {
+      id: "fo-forge-remembers",
+      title: "The Forge Remembers",
+      prompt:
+        "Every forge on this floor lights at once as you pass. The flame-voice speaks again, smaller now. 'I told you I would remember.'",
+      requires: (s) => s.flags.fo_refused_bellows && !s.flags.fo_forge_resolved,
+      weight: 3,
+      choices: [
+        {
+          label: "Pay tribute — 15 gold",
+          hint: "−15 gold · clears the grudge",
+          outcome: "The forges gutter, one by one. 'A late apology is still an apology.'",
+          effect: { gold: -15 },
+          saga: { setFlags: ["fo_forge_resolved"], rep: { foundry: 1 } },
+        },
+        {
+          label: "Walk through the heat",
+          hint: "−6 HP · Forge-Brand (curse)",
+          outcome: "The air burns you on the way past. A glyph sears itself onto your forearm — small, livid, patient.",
+          effect: { hp: -6 },
+          saga: {
+            setFlags: ["fo_forge_resolved"],
+            addCurse: {
+              id: "forge-brand",
+              name: "Forge-Brand",
+              desc: "The Ember Foundry's flames have your measure.",
+            },
+          },
         },
       ],
     },
@@ -149,18 +318,52 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       title: "Your Reflection, Late",
       prompt:
         "Your reflection arrives in the mirror a full breath after you do. It tilts its head and offers — politely — to trade.",
+      requires: (s) => !s.flags.ve_mirror_met,
       choices: [
         {
           label: "Trade a memory for a boon",
           hint: "−6 Focus · +2 AC · 1 potion",
           outcome: "Something small leaves you. You will not notice what until much later.",
           effect: { focus: -6, ac: 2, potions: 1 },
+          saga: { setFlags: ["ve_mirror_met", "ve_traded_memory"] },
         },
         {
           label: "Look away",
-          hint: "+1 Focus regen (mild)",
+          hint: "+4 Focus · the court approves",
           outcome: "You refuse the mirror's eye. The corridor exhales. You feel clearer, somehow.",
           effect: { focus: 4 },
+          saga: { setFlags: ["ve_mirror_met"], rep: { veiled: 1 } },
+        },
+      ],
+    },
+    {
+      id: "ve-mirror-final",
+      title: "The Mirror's Final Trade",
+      prompt:
+        "Your reflection is waiting for you in every mirror on the floor at once. 'One more,' it mouths. 'A name, this time. And then we are even.'",
+      requires: (s) => s.flags.ve_traded_memory && !s.flags.ve_mirror_final,
+      weight: 3,
+      choices: [
+        {
+          label: "Give it a name — yours, perhaps",
+          hint: "+2 shards · Hollow-Name (curse)",
+          outcome: "The mirrors take it gladly. You feel a small lightness where the name used to weigh.",
+          effect: { shards: 2 },
+          saga: {
+            setFlags: ["ve_mirror_final"],
+            addCurse: {
+              id: "hollow-name",
+              name: "Hollow-Name",
+              desc: "Something of you walks the Veiled Halls as a stranger now.",
+            },
+          },
+        },
+        {
+          label: "Smash the nearest mirror",
+          hint: "−4 HP shards · the court is appalled · the mirror is silent",
+          outcome: "Glass opens your knuckles. Every other mirror on the floor cracks at the same time. The corridor is, at last, quiet.",
+          effect: { hp: -4 },
+          saga: { setFlags: ["ve_mirror_final"], rep: { veiled: -2 } },
         },
       ],
     },
@@ -170,18 +373,54 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       npc: "A herald in colourless silks, holding a folded writ",
       prompt:
         "'The Sovereign sees you,' the herald says. 'Bow, and be remembered kindly. Refuse, and be remembered.'",
+      requires: (s) => !s.flags.ve_herald_met,
       choices: [
         {
           label: "Bow",
-          hint: "+10 HP · +1 shield",
+          hint: "+10 HP · +1 shield · the court warms",
           outcome: "Soft applause from nowhere. The court has noted you — for now, fondly.",
           effect: { hp: 10, shield: 1 },
+          saga: { setFlags: ["ve_herald_met", "ve_bowed"], rep: { veiled: 2 } },
         },
         {
           label: "Stand",
-          hint: "+1 ATK · +3 buff DMG · 3 turns",
+          hint: "+1 ATK · +3 buff DMG (3 turns) · the court is offended",
           outcome: "The herald's smile thins to a wire. 'As you wish.' Anger sharpens you.",
           effect: { atkBonus: 1, buffDmg: 3, buffTurns: 3 },
+          saga: { setFlags: ["ve_herald_met", "ve_refused_bow"], rep: { veiled: -2 } },
+        },
+      ],
+    },
+    {
+      id: "ve-herald-return",
+      title: "The Herald Returns, Armed",
+      npc: "The pale herald, this time with two silent guards",
+      prompt:
+        "He does not speak. He simply holds out a writ. The seal is the Sovereign's. The penalty for refusal is already written.",
+      requires: (s) => s.flags.ve_refused_bow && !s.flags.ve_herald_resolved,
+      weight: 3,
+      choices: [
+        {
+          label: "Kneel and accept the writ",
+          hint: "+1 AC · clears the offence",
+          outcome: "You kneel. He nods, almost kindly. 'You learn,' he says, and is gone.",
+          effect: { ac: 1 },
+          saga: { setFlags: ["ve_herald_resolved"], rep: { veiled: 1 } },
+        },
+        {
+          label: "Tear the writ in half",
+          hint: "−8 HP from his guards · Sovereign's Notice (curse)",
+          outcome: "The guards strike once each, with terrible grace, and withdraw. The herald gathers the torn writ as if it were a relic.",
+          effect: { hp: -8 },
+          saga: {
+            setFlags: ["ve_herald_resolved"],
+            rep: { veiled: -2 },
+            addCurse: {
+              id: "sovereigns-notice",
+              name: "Sovereign's Notice",
+              desc: "You are on the Sovereign's list — and near the top.",
+            },
+          },
         },
       ],
     },
@@ -194,38 +433,76 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       npc: "A woman-shape grown through with black roots",
       prompt:
         "She does not move when you approach. 'Give me blood,' she says, 'and I will give you back what the dungeon took.'",
+      requires: (s) => !s.flags.mi_mother_met,
       choices: [
         {
           label: "Give 8 HP of blood",
-          hint: "−8 HP · +2 shards · +1 potion",
+          hint: "−8 HP · +2 shards · +1 potion · she will remember",
           outcome: "She drinks. The roots flush red, then settle. She presses gifts into your hand.",
           effect: { hp: -8, shards: 2, potions: 1 },
+          saga: { setFlags: ["mi_mother_met", "mi_gave_blood"], rep: { mire: 2 } },
         },
         {
           label: "Refuse and pass",
-          hint: "+1 buff DMG · 8 turns",
+          hint: "+1 buff DMG (8 turns) · she does not forget refusal",
           outcome: "Her gaze follows you. You walk on with a slow, cold fury that lasts.",
           effect: { buffDmg: 1, buffTurns: 8 },
+          saga: { setFlags: ["mi_mother_met", "mi_refused_mother"], rep: { mire: -1 } },
+        },
+      ],
+    },
+    {
+      id: "mi-root-mother-return",
+      title: "The Root-Mother Calls You Back",
+      npc: "The same woman, the roots fuller now, deeper red",
+      prompt:
+        "She is woven a little further into the mire than before. 'You were kind once,' she murmurs. 'Be kind again, and I will be kinder still.'",
+      requires: (s) => s.flags.mi_gave_blood && !s.flags.mi_mother_returned,
+      weight: 3,
+      choices: [
+        {
+          label: "Give another 10 HP",
+          hint: "−10 HP · +2 max HP · Mire-Blessed",
+          outcome: "She drinks slowly this time, almost tenderly. Something in you regrows a little larger than before.",
+          effect: { hp: -10 },
+          saga: {
+            setFlags: ["mi_mother_returned"],
+            rep: { mire: 2 },
+            addBlessing: {
+              id: "mire-blessed",
+              name: "Mire-Blessed",
+              desc: "The Blood Mire counts you as one of its own.",
+            },
+          },
+        },
+        {
+          label: "Withhold this time",
+          hint: "+1 elixir · small disappointment",
+          outcome: "She nods. 'A debt is a debt for both of us,' she says, and is the mire again.",
+          effect: { elixirs: 1 },
+          saga: { setFlags: ["mi_mother_returned"] },
         },
       ],
     },
     {
       id: "mi-heart-pulse",
       title: "The Heart's Pulse",
-      prompt:
-        "The mire-floor swells beneath you in a single, deliberate beat. Something vast notices.",
+      prompt: "The mire-floor swells beneath you in a single, deliberate beat. Something vast notices.",
+      requires: (s) => !s.flags.mi_heart_met,
       choices: [
         {
           label: "Press your palm to the floor",
-          hint: "+12 HP · −4 Focus",
+          hint: "+12 HP · −4 Focus · the dungeon learns your shape",
           outcome: "Heat floods up your arm. Your wounds close — and something old learns your shape.",
           effect: { hp: 12, focus: -4 },
+          saga: { setFlags: ["mi_heart_met", "mi_pressed_palm"], rep: { mire: 1 } },
         },
         {
           label: "Step quickly off",
           hint: "+2 shield · +1 AC",
           outcome: "You move on unnoticed. Caution settles around you like armour.",
           effect: { shield: 2, ac: 1 },
+          saga: { setFlags: ["mi_heart_met"] },
         },
       ],
     },
@@ -254,25 +531,33 @@ const SANCTUARY_EVENT: FloorEvent = {
   ],
 };
 
-export function pickFloorIntro(biomeId: BiomeId, floor: number): string {
-  const pool = FLOOR_INTROS[biomeId];
-  return pool[(floor - 1) % pool.length];
-}
-
 export function pickFloorEvent(
   biomeId: BiomeId,
   floor: number,
   isSanctuary: boolean,
+  saga: Saga,
 ): FloorEvent | null {
   if (isSanctuary) return SANCTUARY_EVENT;
-  if (floor === 1) return null; // first descent is just the intro
-  // 70% chance of an event each new floor
+  if (floor === 1) return null;
+  const pool = EVENTS[biomeId].filter((e) => !e.requires || e.requires(saga));
+  if (pool.length === 0) return null;
+
+  // Follow-up events (those with weight) ALWAYS fire when eligible.
+  const followups = pool.filter((e) => e.weight && e.weight > 1);
+  if (followups.length > 0) {
+    return followups[Math.floor(Math.random() * followups.length)];
+  }
+
+  // Otherwise 70% chance of a fresh event.
   if (Math.random() > 0.7) return null;
-  const pool = EVENTS[biomeId];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export function applyFloorChoice(game: GameState, choice: FloorChoice): GameState {
+export function applyFloorChoice(
+  game: GameState,
+  saga: Saga,
+  choice: FloorChoice,
+): { game: GameState; saga: Saga } {
   const e = choice.effect;
   const p = { ...game.player, statuses: { ...game.player.statuses }, equipment: game.player.equipment };
   if (e.hp) p.hp = Math.max(1, Math.min(p.maxHp, p.hp + e.hp));
@@ -288,8 +573,11 @@ export function applyFloorChoice(game: GameState, choice: FloorChoice): GameStat
   if (e.elixirs) p.elixirs = Math.max(0, p.elixirs + e.elixirs);
 
   return {
-    ...game,
-    player: p,
-    log: [...game.log, { t: "event", m: choice.outcome }],
+    game: {
+      ...game,
+      player: p,
+      log: [...game.log, { t: "event", m: choice.outcome }],
+    },
+    saga: applySagaDelta(saga, choice.saga),
   };
 }
