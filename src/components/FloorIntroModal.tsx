@@ -6,10 +6,12 @@ import {
   type FloorChoice,
   type FloorEvent,
 } from "@/lib/floor-events";
+import type { Saga } from "@/lib/saga";
 
 type Props = {
   floor: number;
   isSanctuary: boolean;
+  saga: Saga;
   onChoice: (choice: FloorChoice) => void;
   onClose: () => void;
 };
@@ -23,11 +25,10 @@ function romanize(n: number): string {
   return out;
 }
 
-export function FloorIntroModal({ floor, isSanctuary, onChoice, onClose }: Props) {
+export function FloorIntroModal({ floor, isSanctuary, saga, onChoice, onClose }: Props) {
   const biome = biomeForFloor(floor);
-  // freeze intro + event for the lifetime of this modal instance
-  const [intro] = useState(() => pickFloorIntro(biome.id, floor));
-  const [event] = useState<FloorEvent | null>(() => pickFloorEvent(biome.id, floor, isSanctuary));
+  const [intro] = useState(() => pickFloorIntro(biome.id, floor, saga));
+  const [event] = useState<FloorEvent | null>(() => pickFloorEvent(biome.id, floor, isSanctuary, saga));
   const [resolvedChoice, setResolvedChoice] = useState<FloorChoice | null>(null);
 
   useEffect(() => {
@@ -54,6 +55,9 @@ export function FloorIntroModal({ floor, isSanctuary, onChoice, onClose }: Props
   };
 
   const accent = biome.accentClass;
+  const rep = saga.rep[biome.id] ?? 0;
+  const repLabel =
+    rep >= 2 ? "FAVOURED" : rep <= -2 ? "MARKED" : rep > 0 ? "NOTED" : rep < 0 ? "RESENTED" : null;
 
   return (
     <div
@@ -63,13 +67,13 @@ export function FloorIntroModal({ floor, isSanctuary, onChoice, onClose }: Props
       aria-label={`Floor ${floor} — ${biome.name}`}
     >
       <div className="relative w-full max-w-xl overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune">
-        {/* Header */}
         <div className="relative border-b border-arcane/20 bg-gradient-to-b from-background/40 to-transparent px-6 pb-4 pt-5 text-center">
           <div className={`font-display text-[10px] tracking-[0.5em] ${accent} animate-flicker`}>
             {isSanctuary ? "◆ SANCTUARY ◆" : "◆ YOU DESCEND ◆"}
           </div>
           <div className="mt-1 font-mono text-[10px] tracking-[0.3em] text-muted-foreground">
             FLOOR {romanize(floor)}
+            {repLabel && <span className={`ml-3 ${accent}`}>· {repLabel}</span>}
           </div>
           <h2 className={`mt-1 font-display text-2xl tracking-widest text-glow ${accent}`}>
             {biome.name.toUpperCase()}
