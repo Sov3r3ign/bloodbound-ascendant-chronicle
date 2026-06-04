@@ -190,6 +190,8 @@ function DungeonPage() {
 
   const restart = () => {
     const p = makePlayer(character.vitals);
+    setSaga(emptySaga());
+    lastIntroFloorRef.current = -1;
     setGame(generateDungeon(GRID_W, GRID_H, 1, p));
   };
 
