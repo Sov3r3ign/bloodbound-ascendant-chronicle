@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { InfoTip } from "@/components/InfoTip";
-import { saveCharacter } from "@/lib/character-storage";
+import { RacePortrait, GenderIcon } from "@/components/RacePortrait";
+import { saveCharacter, type Gender } from "@/lib/character-storage";
 import { loadMeta } from "@/lib/meta-storage";
 import {
   ASPECTS,
@@ -29,11 +30,12 @@ export const Route = createFileRoute("/create")({
 
 type Vitals = { vigor: number; focus: number; resolve: number };
 
-const STEPS = ["Name", "Bloodline", "Aspect", "Resonance", "Vitals", "Oath"] as const;
+const STEPS = ["Identity", "Bloodline", "Aspect", "Resonance", "Vitals", "Oath"] as const;
 
 function Forge() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
+  const [gender, setGender] = useState<Gender>("other");
   const [raceId, setRaceId] = useState<string | null>(null);
   const [aspectId, setAspectId] = useState<string | null>(null);
   const [resonanceIds, setResonanceIds] = useState<string[]>([]);
@@ -64,8 +66,8 @@ function Forge() {
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="min-h-[60vh]">
-            {step === 0 && <NameStep name={name} setName={setName} />}
-            {step === 1 && <BloodlineStep raceId={raceId} setRaceId={setRaceId} />}
+            {step === 0 && <IdentityStep name={name} setName={setName} gender={gender} setGender={setGender} />}
+            {step === 1 && <BloodlineStep raceId={raceId} setRaceId={setRaceId} gender={gender} />}
             {step === 2 && <AspectStep aspectId={aspectId} setAspectId={setAspectId} />}
             {step === 3 && (
               <ResonanceStep
@@ -105,7 +107,7 @@ function Forge() {
                   to="/dungeon"
                   onClick={() => {
                     if (raceId && aspectId) {
-                      saveCharacter({ name: name.trim(), raceId, aspectId, resonanceIds, vitals });
+                      saveCharacter({ name: name.trim(), gender, raceId, aspectId, resonanceIds, vitals });
                     }
                   }}
                   className="rounded-sm border border-ember/50 bg-gradient-to-r from-ember/80 to-blood/80 px-8 py-2 font-display text-xs tracking-[0.3em] text-background shadow-arcane"
@@ -119,6 +121,8 @@ function Forge() {
           {/* Live Character Sheet */}
           <CharacterSheet
             name={name}
+            gender={gender}
+            raceId={raceId}
             race={race?.name ?? null}
             raceSigil={race?.sigil}
             aspect={aspect?.name ?? null}
@@ -163,7 +167,22 @@ function Stepper({ step, onStep }: { step: number; onStep: (s: number) => void }
   );
 }
 
-function NameStep({ name, setName }: { name: string; setName: (s: string) => void }) {
+function IdentityStep({
+  name,
+  setName,
+  gender,
+  setGender,
+}: {
+  name: string;
+  setName: (s: string) => void;
+  gender: Gender;
+  setGender: (g: Gender) => void;
+}) {
+  const options: { id: Gender; label: string; hint: string }[] = [
+    { id: "male", label: "Male", hint: "He · Him" },
+    { id: "female", label: "Female", hint: "She · Her" },
+    { id: "other", label: "Other", hint: "They · Them · Beyond" },
+  ];
   return (
     <RuneFrame className="p-10 animate-float-up">
       <Eyebrow>I · The Naming</Eyebrow>
@@ -179,11 +198,41 @@ function NameStep({ name, setName }: { name: string; setName: (s: string) => voi
         className="mt-8 w-full rounded-sm border border-border bg-input/40 px-4 py-3 font-display text-xl tracking-wider text-bone outline-none focus:border-arcane focus:shadow-rune"
         maxLength={48}
       />
+
+      <div className="mt-8">
+        <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
+          VESSEL · GENDER
+          <InfoTip title="Vessel" size={11}>
+            How your ascendant carries themselves in the world. Purely
+            cosmetic — affects portrait, pronouns, and how NPCs address you.
+          </InfoTip>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {options.map((o) => {
+            const active = o.id === gender;
+            return (
+              <button
+                key={o.id}
+                onClick={() => setGender(o.id)}
+                className={`flex items-center gap-3 rounded-sm border p-3 text-left transition-all ${
+                  active ? "border-arcane bg-arcane/10 shadow-arcane" : "border-border bg-card/60 hover:border-arcane/50"
+                }`}
+              >
+                <GenderIcon gender={o.id} size={18} />
+                <div>
+                  <div className="font-display text-xs tracking-widest text-bone">{o.label.toUpperCase()}</div>
+                  <div className="font-serif text-[11px] italic text-muted-foreground">{o.hint}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </RuneFrame>
   );
 }
 
-function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId: (id: string) => void }) {
+function BloodlineStep({ raceId, setRaceId, gender }: { raceId: string | null; setRaceId: (id: string) => void; gender: Gender }) {
   const unlocked = typeof window !== "undefined" ? loadMeta().unlockedRaces : RACES.map((r) => r.id);
   const race = RACES.find((r) => r.id === raceId);
   return (
@@ -215,12 +264,15 @@ function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId
                   : "border-border bg-card/60 hover:border-arcane/50"
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-display text-base tracking-widest text-bone">{r.name}</div>
+              <div className="flex items-center gap-3">
+                <RacePortrait raceId={r.id} gender={gender} size={56} active={active} />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-display text-base tracking-widest text-bone">{r.name}</div>
+                    <span className={`text-2xl ${active ? "text-arcane text-glow animate-flicker" : "text-arcane/60"}`}>{r.sigil}</span>
+                  </div>
                   <div className="font-serif text-xs italic text-muted-foreground">{r.tagline}</div>
                 </div>
-                <span className={`text-2xl ${active ? "text-arcane text-glow animate-flicker" : "text-arcane/60"}`}>{r.sigil}</span>
               </div>
               {isLocked && (
                 <div className="mt-2 font-display text-[9px] tracking-[0.3em] text-blood">⛓ LOCKED — EARN SHARDS</div>
@@ -497,6 +549,8 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 function CharacterSheet({
   name,
+  gender,
+  raceId,
   race,
   raceSigil,
   aspect,
@@ -507,6 +561,8 @@ function CharacterSheet({
   attention,
 }: {
   name: string;
+  gender: Gender;
+  raceId: string | null;
   race: string | null;
   raceSigil?: string;
   aspect: string | null;
@@ -519,10 +575,16 @@ function CharacterSheet({
   return (
     <aside className="sticky top-24 self-start">
       <RuneFrame className="p-5">
-        <div className="text-center">
+        <div className="flex flex-col items-center text-center">
           <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHARACTER SHEET</div>
+          <div className="mt-4">
+            <RacePortrait raceId={raceId} gender={gender} size={88} active={!!raceId} />
+          </div>
           <div className="mt-3 font-display text-xl tracking-wider text-bone min-h-[1.75rem]">{name || "—"}</div>
           <div className="inline-flex items-center justify-center gap-1.5 font-serif text-xs italic text-muted-foreground">
+            <GenderIcon gender={gender} size={11} />
+            <span className="capitalize">{gender}</span>
+            <span className="text-arcane/40">·</span>
             Tier I · Stirring Blood
             <InfoTip title="Ascension Tiers" size={11}>
               Six tiers of bond with the dungeon — from Stirring Blood to
