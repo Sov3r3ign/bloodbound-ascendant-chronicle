@@ -1,6 +1,6 @@
 import { ASPECTS, RACES } from "./game-data";
 
-export type Gender = "male" | "female" | "other";
+export type Gender = "male" | "female";
 
 export type StoredCharacter = {
   name: string;
@@ -26,7 +26,7 @@ export function loadCharacter(): StoredCharacter {
     if (!raw) return defaultCharacter();
     const parsed = JSON.parse(raw) as StoredCharacter;
     if (!parsed?.name || !parsed.raceId || !parsed.aspectId) return defaultCharacter();
-    if (!parsed.gender) parsed.gender = "other";
+    if (!parsed.gender) parsed.gender = "male";
     return parsed;
   } catch {
     return defaultCharacter();
@@ -36,7 +36,7 @@ export function loadCharacter(): StoredCharacter {
 export function defaultCharacter(): StoredCharacter {
   return {
     name: "Wanderer of the Hollow Crown",
-    gender: "other",
+    gender: "male",
     raceId: RACES[0].id,
     aspectId: ASPECTS[0].id,
     resonanceIds: ["wounded"],

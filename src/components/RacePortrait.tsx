@@ -10,11 +10,10 @@ import {
   Leaf,
   Mars,
   Venus,
-  Asterisk,
   type LucideIcon,
 } from "lucide-react";
 
-export type Gender = "male" | "female" | "other";
+export type Gender = "male" | "female";
 
 const RACE_ICONS: Record<string, LucideIcon> = {
   human: User,
@@ -31,13 +30,11 @@ const RACE_ICONS: Record<string, LucideIcon> = {
 const GENDER_ICONS: Record<Gender, LucideIcon> = {
   male: Mars,
   female: Venus,
-  other: Asterisk,
 };
 
 const GENDER_TONE: Record<Gender, string> = {
   male: "text-arcane border-arcane/50",
   female: "text-blood border-blood/50",
-  other: "text-ember border-ember/50",
 };
 
 export function RacePortrait({
