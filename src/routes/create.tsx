@@ -167,7 +167,22 @@ function Stepper({ step, onStep }: { step: number; onStep: (s: number) => void }
   );
 }
 
-function NameStep({ name, setName }: { name: string; setName: (s: string) => void }) {
+function IdentityStep({
+  name,
+  setName,
+  gender,
+  setGender,
+}: {
+  name: string;
+  setName: (s: string) => void;
+  gender: Gender;
+  setGender: (g: Gender) => void;
+}) {
+  const options: { id: Gender; label: string; hint: string }[] = [
+    { id: "male", label: "Male", hint: "He · Him" },
+    { id: "female", label: "Female", hint: "She · Her" },
+    { id: "other", label: "Other", hint: "They · Them · Beyond" },
+  ];
   return (
     <RuneFrame className="p-10 animate-float-up">
       <Eyebrow>I · The Naming</Eyebrow>
@@ -183,11 +198,41 @@ function NameStep({ name, setName }: { name: string; setName: (s: string) => voi
         className="mt-8 w-full rounded-sm border border-border bg-input/40 px-4 py-3 font-display text-xl tracking-wider text-bone outline-none focus:border-arcane focus:shadow-rune"
         maxLength={48}
       />
+
+      <div className="mt-8">
+        <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
+          VESSEL · GENDER
+          <InfoTip title="Vessel" size={11}>
+            How your ascendant carries themselves in the world. Purely
+            cosmetic — affects portrait, pronouns, and how NPCs address you.
+          </InfoTip>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {options.map((o) => {
+            const active = o.id === gender;
+            return (
+              <button
+                key={o.id}
+                onClick={() => setGender(o.id)}
+                className={`flex items-center gap-3 rounded-sm border p-3 text-left transition-all ${
+                  active ? "border-arcane bg-arcane/10 shadow-arcane" : "border-border bg-card/60 hover:border-arcane/50"
+                }`}
+              >
+                <GenderIcon gender={o.id} size={18} />
+                <div>
+                  <div className="font-display text-xs tracking-widest text-bone">{o.label.toUpperCase()}</div>
+                  <div className="font-serif text-[11px] italic text-muted-foreground">{o.hint}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </RuneFrame>
   );
 }
 
-function BloodlineStep({ raceId, setRaceId }: { raceId: string | null; setRaceId: (id: string) => void }) {
+function BloodlineStep({ raceId, setRaceId, gender }: { raceId: string | null; setRaceId: (id: string) => void; gender: Gender }) {
   const unlocked = typeof window !== "undefined" ? loadMeta().unlockedRaces : RACES.map((r) => r.id);
   const race = RACES.find((r) => r.id === raceId);
   return (
