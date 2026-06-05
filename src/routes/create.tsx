@@ -35,7 +35,7 @@ const STEPS = ["Identity", "Bloodline", "Aspect", "Resonance", "Vitals", "Oath"]
 function Forge() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
-  const [gender, setGender] = useState<Gender>("other");
+  const [gender, setGender] = useState<Gender>("male");
   const [raceId, setRaceId] = useState<string | null>(null);
   const [aspectId, setAspectId] = useState<string | null>(null);
   const [resonanceIds, setResonanceIds] = useState<string[]>([]);
@@ -181,7 +181,6 @@ function IdentityStep({
   const options: { id: Gender; label: string; hint: string }[] = [
     { id: "male", label: "Male", hint: "He · Him" },
     { id: "female", label: "Female", hint: "She · Her" },
-    { id: "other", label: "Other", hint: "They · Them · Beyond" },
   ];
   return (
     <RuneFrame className="p-10 animate-float-up">
@@ -207,7 +206,7 @@ function IdentityStep({
             cosmetic — affects portrait, pronouns, and how NPCs address you.
           </InfoTip>
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {options.map((o) => {
             const active = o.id === gender;
             return (
