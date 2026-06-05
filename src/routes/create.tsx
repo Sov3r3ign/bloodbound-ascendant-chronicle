@@ -549,6 +549,8 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 function CharacterSheet({
   name,
+  gender,
+  raceId,
   race,
   raceSigil,
   aspect,
@@ -559,6 +561,8 @@ function CharacterSheet({
   attention,
 }: {
   name: string;
+  gender: Gender;
+  raceId: string | null;
   race: string | null;
   raceSigil?: string;
   aspect: string | null;
@@ -571,10 +575,16 @@ function CharacterSheet({
   return (
     <aside className="sticky top-24 self-start">
       <RuneFrame className="p-5">
-        <div className="text-center">
+        <div className="flex flex-col items-center text-center">
           <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHARACTER SHEET</div>
+          <div className="mt-4">
+            <RacePortrait raceId={raceId} gender={gender} size={88} active={!!raceId} />
+          </div>
           <div className="mt-3 font-display text-xl tracking-wider text-bone min-h-[1.75rem]">{name || "—"}</div>
           <div className="inline-flex items-center justify-center gap-1.5 font-serif text-xs italic text-muted-foreground">
+            <GenderIcon gender={gender} size={11} />
+            <span className="capitalize">{gender}</span>
+            <span className="text-arcane/40">·</span>
             Tier I · Stirring Blood
             <InfoTip title="Ascension Tiers" size={11}>
               Six tiers of bond with the dungeon — from Stirring Blood to
