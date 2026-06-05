@@ -264,12 +264,15 @@ function BloodlineStep({ raceId, setRaceId, gender }: { raceId: string | null; s
                   : "border-border bg-card/60 hover:border-arcane/50"
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-display text-base tracking-widest text-bone">{r.name}</div>
+              <div className="flex items-center gap-3">
+                <RacePortrait raceId={r.id} gender={gender} size={56} active={active} />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-display text-base tracking-widest text-bone">{r.name}</div>
+                    <span className={`text-2xl ${active ? "text-arcane text-glow animate-flicker" : "text-arcane/60"}`}>{r.sigil}</span>
+                  </div>
                   <div className="font-serif text-xs italic text-muted-foreground">{r.tagline}</div>
                 </div>
-                <span className={`text-2xl ${active ? "text-arcane text-glow animate-flicker" : "text-arcane/60"}`}>{r.sigil}</span>
               </div>
               {isLocked && (
                 <div className="mt-2 font-display text-[9px] tracking-[0.3em] text-blood">⛓ LOCKED — EARN SHARDS</div>
