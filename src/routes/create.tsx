@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { InfoTip } from "@/components/InfoTip";
-import { saveCharacter } from "@/lib/character-storage";
+import { RacePortrait, GenderIcon } from "@/components/RacePortrait";
+import { saveCharacter, type Gender } from "@/lib/character-storage";
 import { loadMeta } from "@/lib/meta-storage";
 import {
   ASPECTS,
@@ -29,11 +30,12 @@ export const Route = createFileRoute("/create")({
 
 type Vitals = { vigor: number; focus: number; resolve: number };
 
-const STEPS = ["Name", "Bloodline", "Aspect", "Resonance", "Vitals", "Oath"] as const;
+const STEPS = ["Identity", "Bloodline", "Aspect", "Resonance", "Vitals", "Oath"] as const;
 
 function Forge() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
+  const [gender, setGender] = useState<Gender>("other");
   const [raceId, setRaceId] = useState<string | null>(null);
   const [aspectId, setAspectId] = useState<string | null>(null);
   const [resonanceIds, setResonanceIds] = useState<string[]>([]);
@@ -64,8 +66,8 @@ function Forge() {
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="min-h-[60vh]">
-            {step === 0 && <NameStep name={name} setName={setName} />}
-            {step === 1 && <BloodlineStep raceId={raceId} setRaceId={setRaceId} />}
+            {step === 0 && <IdentityStep name={name} setName={setName} gender={gender} setGender={setGender} />}
+            {step === 1 && <BloodlineStep raceId={raceId} setRaceId={setRaceId} gender={gender} />}
             {step === 2 && <AspectStep aspectId={aspectId} setAspectId={setAspectId} />}
             {step === 3 && (
               <ResonanceStep
@@ -105,7 +107,7 @@ function Forge() {
                   to="/dungeon"
                   onClick={() => {
                     if (raceId && aspectId) {
-                      saveCharacter({ name: name.trim(), raceId, aspectId, resonanceIds, vitals });
+                      saveCharacter({ name: name.trim(), gender, raceId, aspectId, resonanceIds, vitals });
                     }
                   }}
                   className="rounded-sm border border-ember/50 bg-gradient-to-r from-ember/80 to-blood/80 px-8 py-2 font-display text-xs tracking-[0.3em] text-background shadow-arcane"
@@ -119,6 +121,8 @@ function Forge() {
           {/* Live Character Sheet */}
           <CharacterSheet
             name={name}
+            gender={gender}
+            raceId={raceId}
             race={race?.name ?? null}
             raceSigil={race?.sigil}
             aspect={aspect?.name ?? null}
