@@ -588,6 +588,8 @@ function makeMonster(id: number, x: number, y: number, floor: number, boss: bool
       atk: b.atk + Math.floor(bossLvl / 2),
       bonus: b.bonus + Math.floor(bossLvl / 3),
       awake: true, rootedFor: 0, statuses: {}, seenByPlayer: false,
+      phases: BOSS_PHASES[biome.bossName] ? BOSS_PHASES[biome.bossName].map(p => ({ ...p })) : undefined,
+      phaseIndex: 0,
     };
   }
   const pool = biome.monsters;
