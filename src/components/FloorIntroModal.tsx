@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { biomeForFloor } from "@/lib/dungeon-engine";
+import { biomeImage } from "@/lib/biome-images";
 import {
   pickFloorIntro,
   pickFloorEvent,
@@ -67,7 +68,33 @@ export function FloorIntroModal({ floor, isSanctuary, saga, onChoice, onClose }:
       aria-label={`Floor ${floor} — ${biome.name}`}
     >
       <div className="relative w-full max-w-xl overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune">
-        <div className="relative border-b border-arcane/20 bg-gradient-to-b from-background/40 to-transparent px-6 pb-4 pt-5 text-center">
+        <div className="relative h-44 overflow-hidden border-b border-arcane/30">
+          <img
+            src={biomeImage(biome.id)}
+            alt={biome.name}
+            loading="lazy"
+            width={1024}
+            height={512}
+            className="h-full w-full object-cover opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 px-6 pb-3 text-center">
+            <div className={`font-display text-[10px] tracking-[0.5em] ${accent} animate-flicker`}>
+              {isSanctuary ? "◆ SANCTUARY ◆" : "◆ YOU DESCEND ◆"}
+            </div>
+            <div className="mt-0.5 font-mono text-[10px] tracking-[0.3em] text-muted-foreground">
+              FLOOR {romanize(floor)}
+              {repLabel && <span className={`ml-3 ${accent}`}>· {repLabel}</span>}
+            </div>
+            <h2 className={`mt-0.5 font-display text-2xl tracking-widest text-glow ${accent}`}>
+              {biome.name.toUpperCase()}
+            </h2>
+            <div className="mt-0.5 font-serif text-xs italic text-muted-foreground">
+              {biome.subtitle}
+            </div>
+          </div>
+        </div>
+        <div className="hidden border-b border-arcane/20 bg-gradient-to-b from-background/40 to-transparent px-6 pb-4 pt-5 text-center">
           <div className={`font-display text-[10px] tracking-[0.5em] ${accent} animate-flicker`}>
             {isSanctuary ? "◆ SANCTUARY ◆" : "◆ YOU DESCEND ◆"}
           </div>
