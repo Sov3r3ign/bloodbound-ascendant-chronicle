@@ -1288,7 +1288,7 @@ function clone(s: GameState): GameState {
   return {
     ...s,
     tiles: s.tiles.map((row) => row.map((t) => ({ ...t }))),
-    monsters: s.monsters.map((m) => ({ ...m, statuses: { ...m.statuses } })),
+    monsters: s.monsters.map((m) => ({ ...m, statuses: { ...m.statuses }, phases: m.phases ? m.phases.map(p => ({ ...p })) : undefined })),
     items: s.items.map((i) => ({ ...i })),
     player: { ...s.player, equipment: { ...s.player.equipment }, statuses: { ...s.player.statuses } },
     log: s.log.slice(),
