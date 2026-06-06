@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { HowToPlayButton } from "@/components/HowToPlayModal";
 
 export function SiteHeader() {
   return (
@@ -17,13 +18,17 @@ export function SiteHeader() {
           <Link to="/dungeon" className="transition-colors hover:text-arcane [&.active]:text-arcane">DUNGEON</Link>
           <Link to="/chronicler" className="transition-colors hover:text-arcane [&.active]:text-arcane">CHRONICLER</Link>
         </nav>
-        <Link
-          to="/create"
-          className="rounded-sm border border-arcane/40 bg-gradient-arcane px-4 py-2 font-display text-xs tracking-widest text-bone shadow-rune transition-all hover:shadow-arcane"
-        >
-          AWAKEN
-        </Link>
+        <div className="flex items-center gap-3">
+          <HowToPlayButton className="hidden sm:inline-flex" />
+          <Link
+            to="/create"
+            className="rounded-sm border border-arcane/40 bg-gradient-arcane px-4 py-2 font-display text-xs tracking-widest text-bone shadow-rune transition-all hover:shadow-arcane"
+          >
+            AWAKEN
+          </Link>
+        </div>
       </div>
     </header>
   );
 }
+
