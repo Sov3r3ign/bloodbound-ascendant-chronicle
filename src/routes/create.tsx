@@ -179,8 +179,8 @@ function IdentityStep({
   setGender: (g: Gender) => void;
 }) {
   const options: { id: Gender; label: string; hint: string }[] = [
-    { id: "male", label: "Male", hint: "He · Him" },
-    { id: "female", label: "Female", hint: "She · Her" },
+    { id: "male", label: "Male", hint: "Son of the line" },
+    { id: "female", label: "Female", hint: "Daughter of the line" },
   ];
   return (
     <RuneFrame className="p-10 animate-float-up">
@@ -200,10 +200,10 @@ function IdentityStep({
 
       <div className="mt-8">
         <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
-          VESSEL · GENDER
+          VESSEL
           <InfoTip title="Vessel" size={11}>
-            How your ascendant carries themselves in the world. Purely
-            cosmetic — affects portrait, pronouns, and how NPCs address you.
+            The form your ascendant wears in the world. Purely cosmetic —
+            shapes your portrait and how NPCs address you.
           </InfoTip>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -230,6 +230,7 @@ function IdentityStep({
     </RuneFrame>
   );
 }
+
 
 function BloodlineStep({ raceId, setRaceId, gender }: { raceId: string | null; setRaceId: (id: string) => void; gender: Gender }) {
   const unlocked = typeof window !== "undefined" ? loadMeta().unlockedRaces : RACES.map((r) => r.id);
