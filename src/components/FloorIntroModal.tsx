@@ -94,21 +94,6 @@ export function FloorIntroModal({ floor, isSanctuary, saga, onChoice, onClose }:
             </div>
           </div>
         </div>
-        <div className="hidden border-b border-arcane/20 bg-gradient-to-b from-background/40 to-transparent px-6 pb-4 pt-5 text-center">
-          <div className={`font-display text-[10px] tracking-[0.5em] ${accent} animate-flicker`}>
-            {isSanctuary ? "◆ SANCTUARY ◆" : "◆ YOU DESCEND ◆"}
-          </div>
-          <div className="mt-1 font-mono text-[10px] tracking-[0.3em] text-muted-foreground">
-            FLOOR {romanize(floor)}
-            {repLabel && <span className={`ml-3 ${accent}`}>· {repLabel}</span>}
-          </div>
-          <h2 className={`mt-1 font-display text-2xl tracking-widest text-glow ${accent}`}>
-            {biome.name.toUpperCase()}
-          </h2>
-          <div className="mt-0.5 font-serif text-xs italic text-muted-foreground">
-            {biome.subtitle}
-          </div>
-        </div>
 
         <div className="px-6 py-5">
           <p className="font-serif text-sm italic leading-relaxed text-foreground/90">
