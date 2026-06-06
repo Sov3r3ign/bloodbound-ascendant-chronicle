@@ -18,6 +18,18 @@ export type Equipment = {
   trinket: Trinket | null;
 };
 
+export type BossPhase = {
+  threshold: number; // fraction of maxHp; trigger when hp drops below this
+  name: string;
+  line: string;
+  atkDelta?: number;
+  bonusDelta?: number;
+  acDelta?: number;
+  healFrac?: number;
+  burnPlayer?: number;
+  bleedPlayer?: number;
+};
+
 export type Monster = {
   id: number;
   x: number;
@@ -37,6 +49,8 @@ export type Monster = {
   desc: string;
   seenByPlayer: boolean;
   boss?: boolean;
+  phases?: BossPhase[];
+  phaseIndex?: number;
 };
 
 export type Item = {
@@ -545,6 +559,21 @@ const BOSS_LIB: Record<string, MonsterTemplate> = {
   "Heart of the Mire":   { name: "Heart of the Mire",    glyph: "Φ", tone: "ember",  hp: 200, maxHp: 200, atk: 18, bonus: 9, ac: 17, xp: 900, boss: true, desc: "A vast, slow ember beating in a cage of black roots. Every pulse rewrites a memory you were certain of." },
 };
 
+const BOSS_PHASES: Record<string, BossPhase[]> = {
+  "Throne of Maggots": [
+    { threshold: 0.66, name: "Crown Splits",   line: "The crown of maggots bursts — a tide of squirming hunger pours toward you.", atkDelta: 2, bleedPlayer: 3 },
+    { threshold: 0.33, name: "Throne Rises",   line: "The throne lurches upright on a forest of bone-arms. It will not sit again.", atkDelta: 3, bonusDelta: 1, acDelta: 1 },
+  ],
+  "The Veiled Sovereign": [
+    { threshold: 0.66, name: "Veils Fall",     line: "One veil falls. The room dims. Its strikes arrive from where you weren't.", bonusDelta: 2, acDelta: 1 },
+    { threshold: 0.33, name: "Sovereign Unmasked", line: "The last veil tears. The ceiling looks back — and screams.", atkDelta: 4, bonusDelta: 1, healFrac: 0.15 },
+  ],
+  "Heart of the Mire": [
+    { threshold: 0.66, name: "Roots Constrict", line: "Black roots lash from the floor, drinking the room's air. Your skin remembers being eaten.", atkDelta: 2, bleedPlayer: 4 },
+    { threshold: 0.33, name: "Heart Ignites",  line: "The ember-heart blazes white. The cage of roots becomes a furnace.", atkDelta: 4, bonusDelta: 2, burnPlayer: 4, healFrac: 0.1 },
+  ],
+};
+
 function makeMonster(id: number, x: number, y: number, floor: number, boss: boolean): Monster {
   const biome = biomeForFloor(floor);
   if (boss) {
@@ -559,6 +588,8 @@ function makeMonster(id: number, x: number, y: number, floor: number, boss: bool
       atk: b.atk + Math.floor(bossLvl / 2),
       bonus: b.bonus + Math.floor(bossLvl / 3),
       awake: true, rootedFor: 0, statuses: {}, seenByPlayer: false,
+      phases: BOSS_PHASES[biome.bossName] ? BOSS_PHASES[biome.bossName].map(p => ({ ...p })) : undefined,
+      phaseIndex: 0,
     };
   }
   const pool = biome.monsters;
@@ -884,6 +915,7 @@ function attackMonster(s: GameState, m: Monster) {
     s.counters.damageDealt += dmg;
     pushLog(s, { t: "combat", m: `${crit ? "CRIT! " : ""}Damage · 1d${s.player.weaponDie} → ${dmgDie} (+${s.player.atkBonus}${s.player.buffDmg ? `+${s.player.buffDmg}` : ""})${crit ? " ×2" : ""} = ${dmg} to ${m.name}.` });
     flash(s, m.x, m.y, "hit", `-${dmg}`);
+    if (m.boss && m.hp > 0) triggerBossPhases(s, m);
     // weapon tag procs
     const tag = s.player.equipment.weapon?.tag;
     if (tag === "bleed" && rand() < 0.5) {
@@ -914,6 +946,30 @@ function attackMonster(s: GameState, m: Monster) {
     pushLog(s, { t: "combat", m: `Your strike (${total}) glances off ${m.name}'s guard (${m.ac}).` });
     flash(s, m.x, m.y, "miss", "MISS");
   }
+}
+
+function triggerBossPhases(s: GameState, m: Monster) {
+  if (!m.phases || m.phases.length === 0) return;
+  const frac = m.hp / m.maxHp;
+  let idx = m.phaseIndex ?? 0;
+  while (idx < m.phases.length && frac <= m.phases[idx].threshold) {
+    const ph = m.phases[idx];
+    if (ph.atkDelta) m.atk += ph.atkDelta;
+    if (ph.bonusDelta) m.bonus += ph.bonusDelta;
+    if (ph.acDelta) m.ac += ph.acDelta;
+    if (ph.healFrac) {
+      const heal = Math.floor(m.maxHp * ph.healFrac);
+      m.hp = Math.min(m.maxHp, m.hp + heal);
+      flash(s, m.x, m.y, "heal", `+${heal}`);
+    }
+    if (ph.burnPlayer) s.player.statuses.burn = Math.max(s.player.statuses.burn ?? 0, ph.burnPlayer);
+    if (ph.bleedPlayer) s.player.statuses.bleed = Math.max(s.player.statuses.bleed ?? 0, ph.bleedPlayer);
+    shake(s, 450);
+    flash(s, m.x, m.y, "event", ph.name.toUpperCase());
+    pushLog(s, { t: "event", m: `⚜ PHASE — ${m.name}: ${ph.name}. ${ph.line}` });
+    idx++;
+  }
+  m.phaseIndex = idx;
 }
 
 function gainXP(s: GameState, xp: number) {
@@ -1232,7 +1288,7 @@ function clone(s: GameState): GameState {
   return {
     ...s,
     tiles: s.tiles.map((row) => row.map((t) => ({ ...t }))),
-    monsters: s.monsters.map((m) => ({ ...m, statuses: { ...m.statuses } })),
+    monsters: s.monsters.map((m) => ({ ...m, statuses: { ...m.statuses }, phases: m.phases ? m.phases.map(p => ({ ...p })) : undefined })),
     items: s.items.map((i) => ({ ...i })),
     player: { ...s.player, equipment: { ...s.player.equipment }, statuses: { ...s.player.statuses } },
     log: s.log.slice(),
