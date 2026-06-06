@@ -915,6 +915,7 @@ function attackMonster(s: GameState, m: Monster) {
     s.counters.damageDealt += dmg;
     pushLog(s, { t: "combat", m: `${crit ? "CRIT! " : ""}Damage · 1d${s.player.weaponDie} → ${dmgDie} (+${s.player.atkBonus}${s.player.buffDmg ? `+${s.player.buffDmg}` : ""})${crit ? " ×2" : ""} = ${dmg} to ${m.name}.` });
     flash(s, m.x, m.y, "hit", `-${dmg}`);
+    if (m.boss && m.hp > 0) triggerBossPhases(s, m);
     // weapon tag procs
     const tag = s.player.equipment.weapon?.tag;
     if (tag === "bleed" && rand() < 0.5) {
