@@ -559,6 +559,21 @@ const BOSS_LIB: Record<string, MonsterTemplate> = {
   "Heart of the Mire":   { name: "Heart of the Mire",    glyph: "Φ", tone: "ember",  hp: 200, maxHp: 200, atk: 18, bonus: 9, ac: 17, xp: 900, boss: true, desc: "A vast, slow ember beating in a cage of black roots. Every pulse rewrites a memory you were certain of." },
 };
 
+const BOSS_PHASES: Record<string, BossPhase[]> = {
+  "Throne of Maggots": [
+    { threshold: 0.66, name: "Crown Splits",   line: "The crown of maggots bursts — a tide of squirming hunger pours toward you.", atkDelta: 2, bleedPlayer: 3 },
+    { threshold: 0.33, name: "Throne Rises",   line: "The throne lurches upright on a forest of bone-arms. It will not sit again.", atkDelta: 3, bonusDelta: 1, acDelta: 1 },
+  ],
+  "The Veiled Sovereign": [
+    { threshold: 0.66, name: "Veils Fall",     line: "One veil falls. The room dims. Its strikes arrive from where you weren't.", bonusDelta: 2, acDelta: 1 },
+    { threshold: 0.33, name: "Sovereign Unmasked", line: "The last veil tears. The ceiling looks back — and screams.", atkDelta: 4, bonusDelta: 1, healFrac: 0.15 },
+  ],
+  "Heart of the Mire": [
+    { threshold: 0.66, name: "Roots Constrict", line: "Black roots lash from the floor, drinking the room's air. Your skin remembers being eaten.", atkDelta: 2, bleedPlayer: 4 },
+    { threshold: 0.33, name: "Heart Ignites",  line: "The ember-heart blazes white. The cage of roots becomes a furnace.", atkDelta: 4, bonusDelta: 2, burnPlayer: 4, healFrac: 0.1 },
+  ],
+};
+
 function makeMonster(id: number, x: number, y: number, floor: number, boss: boolean): Monster {
   const biome = biomeForFloor(floor);
   if (boss) {
