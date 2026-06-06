@@ -266,14 +266,19 @@ export function makePlayer(vitals: { vigor: number; focus: number; resolve: numb
     buffDmg: 0,
     xp: 0,
     tier: 1,
-    gold: 0,
+    gold: 15,
     shards: 0,
-    potions: 2,
-    elixirs: 1,
-    equipment: { weapon: null, armor: null, trinket: null },
+    potions: 3,
+    elixirs: 2,
+    equipment: {
+      weapon: { name: "Wayfarer's Shortblade", die: 6, bonus: 1 },
+      armor: { name: "Travel Leathers", ac: 1, dr: 0 },
+      trinket: { name: "Wanderer's Token", effect: "+1 HP regen per turn out of combat", heal: 1 },
+    },
     statuses: {},
   };
 }
+
 
 // ---- Dungeon generation ----
 type Room = { x: number; y: number; w: number; h: number; visited?: boolean };
