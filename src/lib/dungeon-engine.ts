@@ -948,6 +948,30 @@ function attackMonster(s: GameState, m: Monster) {
   }
 }
 
+function triggerBossPhases(s: GameState, m: Monster) {
+  if (!m.phases || m.phases.length === 0) return;
+  const frac = m.hp / m.maxHp;
+  let idx = m.phaseIndex ?? 0;
+  while (idx < m.phases.length && frac <= m.phases[idx].threshold) {
+    const ph = m.phases[idx];
+    if (ph.atkDelta) m.atk += ph.atkDelta;
+    if (ph.bonusDelta) m.bonus += ph.bonusDelta;
+    if (ph.acDelta) m.ac += ph.acDelta;
+    if (ph.healFrac) {
+      const heal = Math.floor(m.maxHp * ph.healFrac);
+      m.hp = Math.min(m.maxHp, m.hp + heal);
+      flash(s, m.x, m.y, "heal", `+${heal}`);
+    }
+    if (ph.burnPlayer) s.player.statuses.burn = Math.max(s.player.statuses.burn ?? 0, ph.burnPlayer);
+    if (ph.bleedPlayer) s.player.statuses.bleed = Math.max(s.player.statuses.bleed ?? 0, ph.bleedPlayer);
+    shake(s, 450);
+    flash(s, m.x, m.y, "event", ph.name.toUpperCase());
+    pushLog(s, { t: "event", m: `⚜ PHASE — ${m.name}: ${ph.name}. ${ph.line}` });
+    idx++;
+  }
+  m.phaseIndex = idx;
+}
+
 function gainXP(s: GameState, xp: number) {
   s.player.xp += xp;
   while (s.player.tier < 6 && s.player.xp >= TIER_XP[s.player.tier]) {
