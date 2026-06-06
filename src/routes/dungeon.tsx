@@ -260,13 +260,14 @@ function DungeonPage() {
               } />
             </ul>
 
-            <div className="mt-4 font-display text-[10px] tracking-[0.4em] text-arcane">INVENTORY</div>
+            <div className="mt-4 font-display text-[10px] tracking-[0.4em] text-arcane">ADVENTURER'S BAG</div>
             <ul className="mt-2 space-y-1.5 text-xs">
               <Inv label="Crimson Draught" qty={game.player.potions} hint="[1] heal 18" />
               <Inv label="Focus Elixir" qty={game.player.elixirs} hint="[2] +10 focus" />
               <Inv label="Obols" qty={game.player.gold} />
               <Inv label="Bloodbound Shards" qty={game.player.shards} />
             </ul>
+
 
             {(saga.blessings.length > 0 || saga.curses.length > 0) && (
               <>
