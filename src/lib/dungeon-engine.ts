@@ -18,6 +18,18 @@ export type Equipment = {
   trinket: Trinket | null;
 };
 
+export type BossPhase = {
+  threshold: number; // fraction of maxHp; trigger when hp drops below this
+  name: string;
+  line: string;
+  atkDelta?: number;
+  bonusDelta?: number;
+  acDelta?: number;
+  healFrac?: number;
+  burnPlayer?: number;
+  bleedPlayer?: number;
+};
+
 export type Monster = {
   id: number;
   x: number;
@@ -37,6 +49,8 @@ export type Monster = {
   desc: string;
   seenByPlayer: boolean;
   boss?: boolean;
+  phases?: BossPhase[];
+  phaseIndex?: number;
 };
 
 export type Item = {
