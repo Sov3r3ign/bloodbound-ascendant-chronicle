@@ -556,6 +556,10 @@ function DungeonPage() {
           onClose={() => setFloorIntro(null)}
         />
       )}
+
+      {levelBurst !== null && (
+        <LevelUpBurst tier={levelBurst} onDone={() => setLevelBurst(null)} />
+      )}
     </div>
   );
 }
