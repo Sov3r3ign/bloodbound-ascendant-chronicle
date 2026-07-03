@@ -59,6 +59,14 @@ function DungeonPage() {
   const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean } | null>(null);
   const [saga, setSaga] = useState<Saga>(() => emptySaga());
   const lastIntroFloorRef = useRef<number>(-1);
+  const prevRef = useRef<{
+    hp: number; tier: number; floor: number; kills: number; bossKills: number;
+    gold: number; shards: number; potions: number; elixirs: number; shield: number;
+    status: GameState["status"]; logLen: number; turn: number;
+  } | null>(null);
+  const [levelBurst, setLevelBurst] = useState<number | null>(null);
+  const [combo, setCombo] = useState<{ n: number; lastTurn: number }>({ n: 0, lastTurn: -99 });
+  const [muted, setMutedState] = useState<boolean>(() => isMuted());
 
   // Show floor intro modal whenever we arrive on a new floor
   useEffect(() => {
