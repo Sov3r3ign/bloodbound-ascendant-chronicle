@@ -118,6 +118,49 @@ function DungeonPage() {
     }
   }, [game?.shakeUntil]);
 
+  // Diff game state to fire SFX, level-up bursts, combo counter
+  useEffect(() => {
+    if (!game) return;
+    const prev = prevRef.current;
+    const cur = {
+      hp: game.player.hp, tier: game.player.tier, floor: game.floor,
+      kills: game.counters.kills, bossKills: game.counters.bossKills,
+      gold: game.player.gold, shards: game.player.shards,
+      potions: game.player.potions, elixirs: game.player.elixirs,
+      shield: game.player.shield, status: game.status,
+      logLen: game.log.length, turn: game.turn,
+    };
+    if (prev) {
+      if (cur.tier > prev.tier) { sfx("level"); setLevelBurst(cur.tier); }
+      if (cur.floor > prev.floor) sfx("ascend");
+      if (cur.status === "dead" && prev.status !== "dead") sfx("death");
+      if (cur.kills > prev.kills) {
+        sfx("kill");
+        setCombo((c) => ({ n: cur.turn - c.lastTurn <= 3 ? c.n + (cur.kills - prev.kills) : (cur.kills - prev.kills), lastTurn: cur.turn }));
+      } else if (cur.turn - combo.lastTurn > 6 && combo.n > 0) {
+        setCombo({ n: 0, lastTurn: cur.turn });
+      }
+      if (cur.bossKills > prev.bossKills) sfx("crit");
+      if (cur.hp < prev.hp) sfx("hurt");
+      if (cur.potions < prev.potions || cur.elixirs < prev.elixirs) sfx("quaff");
+      if (cur.shield > prev.shield) sfx("shield");
+      if (cur.gold > prev.gold) sfx("gold");
+      if (cur.shards > prev.shards) sfx("chest");
+      // recent log tail for combat/miss cues
+      if (cur.logLen > prev.logLen) {
+        for (let i = prev.logLen; i < cur.logLen; i++) {
+          const e = game.log[i];
+          if (!e) continue;
+          if (e.t === "combat" && /miss/i.test(e.m)) sfx("miss");
+          else if (e.t === "combat" && /hit|strike|crit/i.test(e.m) && cur.kills === prev.kills) sfx("hit");
+          else if (e.t === "system" && /shrine/i.test(e.m)) sfx("shrine");
+        }
+      }
+    }
+    prevRef.current = cur;
+  }, [game]);
+
+
   // Keyboard controls
   useEffect(() => {
     if (!game || !character) return;
