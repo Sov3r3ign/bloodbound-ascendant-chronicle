@@ -265,6 +265,20 @@ function DungeonPage() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {combo.n >= 2 && game.turn - combo.lastTurn <= 3 && (
+                <div className="rounded-sm border border-ember/60 bg-ember/10 px-2 py-1 font-display text-[10px] tracking-widest text-ember shadow-rune animate-float-up">
+                  ⚔ COMBO ×{combo.n}
+                </div>
+              )}
+              <button
+                onClick={() => setMutedState(toggleMuted())}
+                aria-label={muted ? "Unmute sound" : "Mute sound"}
+                className="rounded-sm border border-border/60 bg-card/60 p-1.5 text-muted-foreground transition-colors hover:border-arcane hover:text-arcane"
+              >
+                {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              </button>
+            </div>
             <AttentionMeter value={game.attention} turn={game.turn} sanctuary={game.isSanctuary} />
             {meta && (
               <div className="font-mono text-[10px] text-muted-foreground">
@@ -273,6 +287,7 @@ function DungeonPage() {
             )}
           </div>
         </div>
+
 
         <div className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr_320px]">
           {/* Left column: vitals + equipment */}
