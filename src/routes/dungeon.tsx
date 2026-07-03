@@ -411,17 +411,48 @@ function DungeonPage() {
               )}
             </div>
 
-            {/* Action bar */}
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              <ActionBtn label="ATTACK / MOVE" hint="↑↓←→ · WASD" />
-              <ActionBtn label="WAIT" hint="SPACE · ." onClick={() => setGame((g) => g ? step(g, "wait") : g)} />
-              <ActionBtn label="POTION" hint="[1]" disabled={game.player.potions === 0} onClick={() => setGame((g) => g ? quaffPotion(g) : g)} />
-              <ActionBtn label="ELIXIR" hint="[2]" disabled={game.player.elixirs === 0} onClick={() => setGame((g) => g ? quaffElixir(g) : g)} />
-              <ActionBtn label={power.label} hint="[Q]" disabled={game.player.focus < power.cost} onClick={() => setGame((g) => g ? usePower(g, character.aspectId) : g)} accent />
-              {onShrine && (
-                <ActionBtn label="INVOKE SHRINE" hint="[R]" onClick={() => setGame((g) => g ? invokeShrine(g) : g)} accent />
-              )}
+            {/* Skill bar */}
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              <SkillSlot hotkey="MOVE" label="STRIKE" tone="blood" icon={<Swords size={22} />} />
+              <SkillSlot hotkey="SPC" label="WAIT" tone="bone" icon={<Hourglass size={22} />} onClick={() => setGame((g) => g ? step(g, "wait") : g)} />
+              <SkillSlot
+                hotkey="1"
+                label="POTION"
+                tone="blood"
+                icon={<FlaskConical size={22} />}
+                badge={game.player.potions}
+                disabled={game.player.potions === 0}
+                onClick={() => setGame((g) => g ? quaffPotion(g) : g)}
+              />
+              <SkillSlot
+                hotkey="2"
+                label="ELIXIR"
+                tone="arcane"
+                icon={<Beaker size={22} />}
+                badge={game.player.elixirs}
+                disabled={game.player.elixirs === 0}
+                onClick={() => setGame((g) => g ? quaffElixir(g) : g)}
+              />
+              <SkillSlot
+                hotkey="Q"
+                label={power.label.split(" ")[0].toUpperCase()}
+                tone="ember"
+                icon={<Sparkles size={22} />}
+                badge={`${power.cost}f`}
+                disabled={game.player.focus < power.cost}
+                onClick={() => { sfx("power"); setGame((g) => g ? usePower(g, character.aspectId) : g); }}
+                accent
+              />
+              <SkillSlot
+                hotkey="R"
+                label="SHRINE"
+                tone="arcane"
+                icon={<Flame size={22} />}
+                disabled={!onShrine}
+                onClick={() => setGame((g) => g ? invokeShrine(g) : g)}
+              />
             </div>
+
 
             {/* Shop appears under map on sanctuary floors */}
             {game.isSanctuary && game.shop && game.status === "playing" && (
