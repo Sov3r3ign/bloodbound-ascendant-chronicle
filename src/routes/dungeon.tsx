@@ -27,6 +27,9 @@ import { beastImage } from "@/lib/beast-images";
 import { FloorIntroModal } from "@/components/FloorIntroModal";
 import { applyFloorChoice, type FloorChoice } from "@/lib/floor-events";
 import { emptySaga, type Saga } from "@/lib/saga";
+import { sfx, isMuted, toggleMuted } from "@/lib/sfx";
+import { LevelUpBurst } from "@/components/LevelUpBurst";
+import { Volume2, VolumeX, Swords, Hourglass, FlaskConical, Beaker, Sparkles, Flame } from "lucide-react";
 
 export const Route = createFileRoute("/dungeon")({
   head: () => ({
