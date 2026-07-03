@@ -872,18 +872,56 @@ function StatusBadges({ statuses }: { statuses: { [k: string]: number | undefine
 function Bar({ label, value, max, tone }: { label: string; value: number; max: number; tone: "blood" | "arcane" | "ember" }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   const color = tone === "blood" ? "bg-gradient-blood" : tone === "arcane" ? "bg-gradient-arcane" : "bg-gradient-rune";
+  const low = tone === "blood" && pct < 30;
+  const fillColor = tone === "blood" ? "text-blood" : tone === "arcane" ? "text-arcane" : "text-ember";
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between font-display text-[10px] tracking-widest">
         <span className={`text-${tone}`}>{label}</span>
         <span className="font-mono text-foreground/80">{value}/{max}</span>
       </div>
-      <div className="mt-1 h-2 overflow-hidden rounded-full bg-border/60">
-        <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      <div className={`hud-bar mt-1 h-3 rounded-full ${low ? "hud-bar-low" : ""}`}>
+        <div className={`hud-bar-fill ${color} ${fillColor} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 }
+
+function SkillSlot({
+  hotkey, label, icon, tone, badge, onClick, disabled, accent,
+}: {
+  hotkey: string;
+  label: string;
+  icon: React.ReactNode;
+  tone: "blood" | "arcane" | "ember" | "bone";
+  badge?: number | string;
+  onClick?: () => void;
+  disabled?: boolean;
+  accent?: boolean;
+}) {
+  const toneClass =
+    tone === "blood" ? "text-blood border-blood/50" :
+    tone === "ember" ? "text-ember border-ember/50" :
+    tone === "arcane" ? "text-arcane border-arcane/50" :
+    "text-bone border-bone/40";
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || !onClick}
+      className={`skill-slot flex aspect-square min-h-[64px] flex-col items-center justify-center gap-1 rounded-md border-2 px-1 disabled:opacity-30 disabled:cursor-not-allowed ${toneClass} ${accent ? "animate-pulse-glow" : ""}`}
+    >
+      <span className="skill-key">{hotkey}</span>
+      {badge !== undefined && badge !== 0 && (
+        <span className="absolute right-1 top-1 rounded-full bg-black/70 px-1 font-mono text-[9px] text-bone">
+          {badge}
+        </span>
+      )}
+      <span className={toneClass.split(" ")[0]}>{icon}</span>
+      <span className="font-display text-[9px] tracking-widest">{label}</span>
+    </button>
+  );
+}
+
 
 function Stat({ label, v, prefix = "" }: { label: string; v: number; prefix?: string }) {
   return (
