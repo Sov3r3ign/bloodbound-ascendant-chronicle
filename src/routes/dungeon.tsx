@@ -27,6 +27,9 @@ import { beastImage } from "@/lib/beast-images";
 import { FloorIntroModal } from "@/components/FloorIntroModal";
 import { applyFloorChoice, type FloorChoice } from "@/lib/floor-events";
 import { emptySaga, type Saga } from "@/lib/saga";
+import { sfx, isMuted, toggleMuted } from "@/lib/sfx";
+import { LevelUpBurst } from "@/components/LevelUpBurst";
+import { Volume2, VolumeX, Swords, Hourglass, FlaskConical, Beaker, Sparkles, Flame } from "lucide-react";
 
 export const Route = createFileRoute("/dungeon")({
   head: () => ({
@@ -56,6 +59,14 @@ function DungeonPage() {
   const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean } | null>(null);
   const [saga, setSaga] = useState<Saga>(() => emptySaga());
   const lastIntroFloorRef = useRef<number>(-1);
+  const prevRef = useRef<{
+    hp: number; tier: number; floor: number; kills: number; bossKills: number;
+    gold: number; shards: number; potions: number; elixirs: number; shield: number;
+    status: GameState["status"]; logLen: number; turn: number;
+  } | null>(null);
+  const [levelBurst, setLevelBurst] = useState<number | null>(null);
+  const [combo, setCombo] = useState<{ n: number; lastTurn: number }>({ n: 0, lastTurn: -99 });
+  const [muted, setMutedState] = useState<boolean>(() => isMuted());
 
   // Show floor intro modal whenever we arrive on a new floor
   useEffect(() => {
@@ -106,6 +117,49 @@ function DungeonPage() {
       return () => clearTimeout(t);
     }
   }, [game?.shakeUntil]);
+
+  // Diff game state to fire SFX, level-up bursts, combo counter
+  useEffect(() => {
+    if (!game) return;
+    const prev = prevRef.current;
+    const cur = {
+      hp: game.player.hp, tier: game.player.tier, floor: game.floor,
+      kills: game.counters.kills, bossKills: game.counters.bossKills,
+      gold: game.player.gold, shards: game.player.shards,
+      potions: game.player.potions, elixirs: game.player.elixirs,
+      shield: game.player.shield, status: game.status,
+      logLen: game.log.length, turn: game.turn,
+    };
+    if (prev) {
+      if (cur.tier > prev.tier) { sfx("level"); setLevelBurst(cur.tier); }
+      if (cur.floor > prev.floor) sfx("ascend");
+      if (cur.status === "dead" && prev.status !== "dead") sfx("death");
+      if (cur.kills > prev.kills) {
+        sfx("kill");
+        setCombo((c) => ({ n: cur.turn - c.lastTurn <= 3 ? c.n + (cur.kills - prev.kills) : (cur.kills - prev.kills), lastTurn: cur.turn }));
+      } else if (cur.turn - combo.lastTurn > 6 && combo.n > 0) {
+        setCombo({ n: 0, lastTurn: cur.turn });
+      }
+      if (cur.bossKills > prev.bossKills) sfx("crit");
+      if (cur.hp < prev.hp) sfx("hurt");
+      if (cur.potions < prev.potions || cur.elixirs < prev.elixirs) sfx("quaff");
+      if (cur.shield > prev.shield) sfx("shield");
+      if (cur.gold > prev.gold) sfx("gold");
+      if (cur.shards > prev.shards) sfx("chest");
+      // recent log tail for combat/miss cues
+      if (cur.logLen > prev.logLen) {
+        for (let i = prev.logLen; i < cur.logLen; i++) {
+          const e = game.log[i];
+          if (!e) continue;
+          if (e.t === "combat" && /miss/i.test(e.m)) sfx("miss");
+          else if (e.t === "combat" && /hit|strike|crit/i.test(e.m) && cur.kills === prev.kills) sfx("hit");
+          else if (e.t === "system" && /shrine/i.test(e.m)) sfx("shrine");
+        }
+      }
+    }
+    prevRef.current = cur;
+  }, [game]);
+
 
   // Keyboard controls
   useEffect(() => {
@@ -211,6 +265,20 @@ function DungeonPage() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {combo.n >= 2 && game.turn - combo.lastTurn <= 3 && (
+                <div className="rounded-sm border border-ember/60 bg-ember/10 px-2 py-1 font-display text-[10px] tracking-widest text-ember shadow-rune animate-float-up">
+                  ⚔ COMBO ×{combo.n}
+                </div>
+              )}
+              <button
+                onClick={() => setMutedState(toggleMuted())}
+                aria-label={muted ? "Unmute sound" : "Mute sound"}
+                className="rounded-sm border border-border/60 bg-card/60 p-1.5 text-muted-foreground transition-colors hover:border-arcane hover:text-arcane"
+              >
+                {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              </button>
+            </div>
             <AttentionMeter value={game.attention} turn={game.turn} sanctuary={game.isSanctuary} />
             {meta && (
               <div className="font-mono text-[10px] text-muted-foreground">
@@ -219,6 +287,7 @@ function DungeonPage() {
             )}
           </div>
         </div>
+
 
         <div className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr_320px]">
           {/* Left column: vitals + equipment */}
@@ -342,17 +411,48 @@ function DungeonPage() {
               )}
             </div>
 
-            {/* Action bar */}
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              <ActionBtn label="ATTACK / MOVE" hint="↑↓←→ · WASD" />
-              <ActionBtn label="WAIT" hint="SPACE · ." onClick={() => setGame((g) => g ? step(g, "wait") : g)} />
-              <ActionBtn label="POTION" hint="[1]" disabled={game.player.potions === 0} onClick={() => setGame((g) => g ? quaffPotion(g) : g)} />
-              <ActionBtn label="ELIXIR" hint="[2]" disabled={game.player.elixirs === 0} onClick={() => setGame((g) => g ? quaffElixir(g) : g)} />
-              <ActionBtn label={power.label} hint="[Q]" disabled={game.player.focus < power.cost} onClick={() => setGame((g) => g ? usePower(g, character.aspectId) : g)} accent />
-              {onShrine && (
-                <ActionBtn label="INVOKE SHRINE" hint="[R]" onClick={() => setGame((g) => g ? invokeShrine(g) : g)} accent />
-              )}
+            {/* Skill bar */}
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              <SkillSlot hotkey="MOVE" label="STRIKE" tone="blood" icon={<Swords size={22} />} />
+              <SkillSlot hotkey="SPC" label="WAIT" tone="bone" icon={<Hourglass size={22} />} onClick={() => setGame((g) => g ? step(g, "wait") : g)} />
+              <SkillSlot
+                hotkey="1"
+                label="POTION"
+                tone="blood"
+                icon={<FlaskConical size={22} />}
+                badge={game.player.potions}
+                disabled={game.player.potions === 0}
+                onClick={() => setGame((g) => g ? quaffPotion(g) : g)}
+              />
+              <SkillSlot
+                hotkey="2"
+                label="ELIXIR"
+                tone="arcane"
+                icon={<Beaker size={22} />}
+                badge={game.player.elixirs}
+                disabled={game.player.elixirs === 0}
+                onClick={() => setGame((g) => g ? quaffElixir(g) : g)}
+              />
+              <SkillSlot
+                hotkey="Q"
+                label={power.label.split(" ")[0].toUpperCase()}
+                tone="ember"
+                icon={<Sparkles size={22} />}
+                badge={`${power.cost}f`}
+                disabled={game.player.focus < power.cost}
+                onClick={() => { sfx("power"); setGame((g) => g ? usePower(g, character.aspectId) : g); }}
+                accent
+              />
+              <SkillSlot
+                hotkey="R"
+                label="SHRINE"
+                tone="arcane"
+                icon={<Flame size={22} />}
+                disabled={!onShrine}
+                onClick={() => setGame((g) => g ? invokeShrine(g) : g)}
+              />
             </div>
+
 
             {/* Shop appears under map on sanctuary floors */}
             {game.isSanctuary && game.shop && game.status === "playing" && (
@@ -455,6 +555,10 @@ function DungeonPage() {
           }}
           onClose={() => setFloorIntro(null)}
         />
+      )}
+
+      {levelBurst !== null && (
+        <LevelUpBurst tier={levelBurst} onDone={() => setLevelBurst(null)} />
       )}
     </div>
   );
@@ -772,18 +876,56 @@ function StatusBadges({ statuses }: { statuses: { [k: string]: number | undefine
 function Bar({ label, value, max, tone }: { label: string; value: number; max: number; tone: "blood" | "arcane" | "ember" }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   const color = tone === "blood" ? "bg-gradient-blood" : tone === "arcane" ? "bg-gradient-arcane" : "bg-gradient-rune";
+  const low = tone === "blood" && pct < 30;
+  const fillColor = tone === "blood" ? "text-blood" : tone === "arcane" ? "text-arcane" : "text-ember";
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between font-display text-[10px] tracking-widest">
         <span className={`text-${tone}`}>{label}</span>
         <span className="font-mono text-foreground/80">{value}/{max}</span>
       </div>
-      <div className="mt-1 h-2 overflow-hidden rounded-full bg-border/60">
-        <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      <div className={`hud-bar mt-1 h-3 rounded-full ${low ? "hud-bar-low" : ""}`}>
+        <div className={`hud-bar-fill ${color} ${fillColor} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 }
+
+function SkillSlot({
+  hotkey, label, icon, tone, badge, onClick, disabled, accent,
+}: {
+  hotkey: string;
+  label: string;
+  icon: React.ReactNode;
+  tone: "blood" | "arcane" | "ember" | "bone";
+  badge?: number | string;
+  onClick?: () => void;
+  disabled?: boolean;
+  accent?: boolean;
+}) {
+  const toneClass =
+    tone === "blood" ? "text-blood border-blood/50" :
+    tone === "ember" ? "text-ember border-ember/50" :
+    tone === "arcane" ? "text-arcane border-arcane/50" :
+    "text-bone border-bone/40";
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || !onClick}
+      className={`skill-slot flex aspect-square min-h-[64px] flex-col items-center justify-center gap-1 rounded-md border-2 px-1 disabled:opacity-30 disabled:cursor-not-allowed ${toneClass} ${accent ? "animate-pulse-glow" : ""}`}
+    >
+      <span className="skill-key">{hotkey}</span>
+      {badge !== undefined && badge !== 0 && (
+        <span className="absolute right-1 top-1 rounded-full bg-black/70 px-1 font-mono text-[9px] text-bone">
+          {badge}
+        </span>
+      )}
+      <span className={toneClass.split(" ")[0]}>{icon}</span>
+      <span className="font-display text-[9px] tracking-widest">{label}</span>
+    </button>
+  );
+}
+
 
 function Stat({ label, v, prefix = "" }: { label: string; v: number; prefix?: string }) {
   return (
