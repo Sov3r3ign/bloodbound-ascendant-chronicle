@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "The Bloodbound Ascendants — A Dark Fantasy RPG" },
+      { name: "description", content: "Forge a Bloodbound Ascendant, raid living dungeons, and bend fate in a narrative-driven multiplayer RPG." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "The Bloodbound Ascendants — A Dark Fantasy RPG" },
+      { property: "og:description", content: "Forge a Bloodbound Ascendant, raid living dungeons, and bend fate in a narrative-driven multiplayer RPG." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "The Bloodbound Ascendants — A Dark Fantasy RPG" },
+      { name: "twitter:description", content: "Forge a Bloodbound Ascendant, raid living dungeons, and bend fate in a narrative-driven multiplayer RPG." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a7f2ff67-b9cb-44c5-af78-ec9ce4d1a2b2/id-preview-3054ad6b--d34d7fd3-1245-40f2-aad8-9cf3ead739ba.lovable.app-1783166224177.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a7f2ff67-b9cb-44c5-af78-ec9ce4d1a2b2/id-preview-3054ad6b--d34d7fd3-1245-40f2-aad8-9cf3ead739ba.lovable.app-1783166224177.png" },
     ],
     links: [
       {
