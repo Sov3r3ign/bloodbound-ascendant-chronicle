@@ -58,9 +58,13 @@ function Forge() {
   }, [step, name, raceId, aspectId, resonanceIds, remaining]);
 
   return (
-    <div className="min-h-screen">
+    <div
+      className="min-h-screen race-themed"
+      data-race-theme={raceId ?? undefined}
+    >
       <SiteHeader />
       <div className="mx-auto max-w-7xl px-6 py-10">
+
         {/* Stepper */}
         <Stepper step={step} onStep={setStep} />
 
