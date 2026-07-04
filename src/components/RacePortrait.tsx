@@ -1,7 +1,10 @@
+import { useRef, useState, type MouseEvent } from "react";
 import {
   User,
   Mars,
   Venus,
+  Eye,
+  EyeOff,
   type LucideIcon,
 } from "lucide-react";
 import { RACE_IMAGES } from "@/lib/race-images";
@@ -65,4 +68,104 @@ export function RacePortrait({
 export function GenderIcon({ gender, size = 14 }: { gender: Gender; size?: number }) {
   const G = GENDER_ICONS[gender];
   return <G size={size} className={GENDER_TONE[gender].split(" ")[0]} />;
+}
+
+/**
+ * Large full-bleed race preview with hover-parallax and a togglable
+ * gender-sigil overlay. Use in the forge / character sheet for a hero card.
+ */
+export function RacePreview({
+  raceId,
+  gender,
+  height = 360,
+  className = "",
+  label,
+}: {
+  raceId: string | null;
+  gender: Gender;
+  height?: number;
+  className?: string;
+  label?: string;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0, sx: 1 });
+  const [showSigil, setShowSigil] = useState(true);
+
+  const img = raceId ? RACE_IMAGES[raceId] : undefined;
+  const GIcon = GENDER_ICONS[gender];
+  const tone = GENDER_TONE[gender];
+
+  const onMove = (e: MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    setTilt({ x: px, y: py, sx: 1.08 });
+  };
+  const onLeave = () => setTilt({ x: 0, y: 0, sx: 1 });
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      className={`relative w-full overflow-hidden rounded-lg border border-border/70 rune-border shadow-deep ${className}`}
+      style={{ height, perspective: 900 }}
+    >
+      {img ? (
+        <img
+          src={img}
+          alt={label ?? ""}
+          className="absolute inset-0 h-full w-full object-cover will-change-transform"
+          style={{
+            transform: `scale(${tilt.sx}) translate3d(${tilt.x * -18}px, ${tilt.y * -14}px, 0) rotateX(${tilt.y * -4}deg) rotateY(${tilt.x * 6}deg)`,
+            transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+            objectPosition: "center 18%",
+          }}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <User className="text-arcane/60" size={Math.round(height * 0.35)} strokeWidth={1.2} />
+        </div>
+      )}
+
+      {/* atmospheric wash + vignette */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 10%, transparent 40%, oklch(0.08 0.02 285 / 55%) 85%), linear-gradient(180deg, transparent 55%, oklch(0.08 0.02 285 / 85%) 100%)",
+        }}
+      />
+
+      {/* gender sigil overlay (toggleable) */}
+      {showSigil && (
+        <span
+          className={`pointer-events-none absolute right-4 top-4 inline-flex h-12 w-12 items-center justify-center rounded-full border bg-background/60 backdrop-blur-sm animate-float-up ${tone}`}
+        >
+          <GIcon size={22} strokeWidth={2} />
+        </span>
+      )}
+
+      {/* label */}
+      {label && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3">
+          <div className="font-display text-lg tracking-widest text-bone text-glow">
+            {label}
+          </div>
+        </div>
+      )}
+
+      {/* toggle */}
+      <button
+        type="button"
+        onClick={() => setShowSigil((v) => !v)}
+        aria-label={showSigil ? "Hide gender sigil" : "Show gender sigil"}
+        className="absolute left-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/70 bg-background/60 text-muted-foreground backdrop-blur-sm transition hover:text-bone hover:border-arcane/60"
+      >
+        {showSigil ? <EyeOff size={14} /> : <Eye size={14} />}
+      </button>
+    </div>
+  );
 }
