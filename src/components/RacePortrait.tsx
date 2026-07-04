@@ -1,17 +1,11 @@
 import {
   User,
-  Flame,
-  Sparkles,
-  Moon,
-  Mountain,
-  Skull,
-  PawPrint,
-  Hammer,
-  Leaf,
   Mars,
   Venus,
   type LucideIcon,
 } from "lucide-react";
+import { RACE_IMAGES } from "@/lib/race-images";
+
 
 export type Gender = "male" | "female";
 
