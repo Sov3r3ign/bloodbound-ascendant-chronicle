@@ -1,31 +1,13 @@
 import {
   User,
-  Flame,
-  Sparkles,
-  Moon,
-  Mountain,
-  Skull,
-  PawPrint,
-  Hammer,
-  Leaf,
   Mars,
   Venus,
   type LucideIcon,
 } from "lucide-react";
+import { RACE_IMAGES } from "@/lib/race-images";
+
 
 export type Gender = "male" | "female";
-
-const RACE_ICONS: Record<string, LucideIcon> = {
-  human: User,
-  dragonborn: Flame,
-  fae: Sparkles,
-  umbralborn: Moon,
-  giant: Mountain,
-  crocman: Skull,
-  beastkin: PawPrint,
-  dwarf: Hammer,
-  elf: Leaf,
-};
 
 const GENDER_ICONS: Record<Gender, LucideIcon> = {
   male: Mars,
@@ -41,7 +23,6 @@ export function RacePortrait({
   raceId,
   gender,
   size = 96,
-  tone = "arcane",
   active = false,
 }: {
   raceId: string | null;
@@ -50,16 +31,26 @@ export function RacePortrait({
   tone?: "arcane" | "blood" | "ember" | "bone";
   active?: boolean;
 }) {
-  const Icon = (raceId && RACE_ICONS[raceId]) || User;
+  const img = raceId ? RACE_IMAGES[raceId] : undefined;
   const GIcon = GENDER_ICONS[gender];
   return (
     <div
-      className={`relative inline-flex items-center justify-center rounded-full border bg-gradient-to-b from-card to-background/40 ${
+      className={`relative inline-flex items-center justify-center overflow-hidden rounded-full border bg-gradient-to-b from-card to-background/40 ${
         active ? "border-arcane shadow-arcane animate-flicker" : "border-border/70"
       }`}
       style={{ width: size, height: size }}
     >
-      <Icon className={`text-${tone}`} size={Math.round(size * 0.5)} strokeWidth={1.4} />
+      {img ? (
+        <img
+          src={img}
+          alt=""
+          loading="lazy"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: "center 20%" }}
+        />
+      ) : (
+        <User className="text-arcane" size={Math.round(size * 0.5)} strokeWidth={1.4} />
+      )}
       <span
         className={`absolute -bottom-1 -right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border bg-background ${GENDER_TONE[gender]}`}
         title={gender}
@@ -69,6 +60,7 @@ export function RacePortrait({
     </div>
   );
 }
+
 
 export function GenderIcon({ gender, size = 14 }: { gender: Gender; size?: number }) {
   const G = GENDER_ICONS[gender];
