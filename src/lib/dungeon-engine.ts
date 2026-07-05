@@ -747,6 +747,13 @@ export function step(s: GameState, dir: MoveDir): GameState {
   const [dx, dy] = DELTA[dir];
   const tx = next.player.x + dx;
   const ty = next.player.y + dy;
+  // Bump-to-talk: NPC on target tile → open dialogue, do not move, do not endTurn.
+  const npc = next.npcs.find((n) => n.x === tx && n.y === ty);
+  if (npc) {
+    next.pendingNpcId = npc.id;
+    pushLog(next, { t: "event", m: `${npc.name} regards you.` });
+    return next;
+  }
   const target = monsterAt(next, tx, ty);
   if (target) {
     attackMonster(next, target);
