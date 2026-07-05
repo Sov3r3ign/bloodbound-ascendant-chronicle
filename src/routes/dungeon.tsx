@@ -735,6 +735,14 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
                 : monster.tone === "arcane" ? "text-arcane"
                 : "text-bone";
             }
+            if (npc) {
+              glyph = npc.glyph;
+              tone =
+                npc.tone === "blood" ? "text-blood text-glow animate-flicker"
+                : npc.tone === "ember" ? "text-ember text-glow-ember animate-flicker"
+                : npc.tone === "arcane" ? "text-arcane text-glow animate-flicker"
+                : "text-bone text-glow animate-flicker";
+            }
             if (isPlayer) {
               glyph = "@";
               tone = "text-bone text-glow";
