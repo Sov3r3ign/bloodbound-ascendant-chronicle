@@ -672,6 +672,7 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
           const tile = game.tiles[y][x];
           const isPlayer = game.player.x === x && game.player.y === y;
           const monster = tile.visible ? game.monsters.find((m) => m.x === x && m.y === y && m.hp > 0) : undefined;
+          const npc = tile.visible ? game.npcs.find((n) => n.x === x && n.y === y) : undefined;
           const item = tile.visible ? game.items.find((i) => i.x === x && i.y === y) : undefined;
           const adjacent = !isPlayer && Math.abs(x - game.player.x) + Math.abs(y - game.player.y) === 1;
 
