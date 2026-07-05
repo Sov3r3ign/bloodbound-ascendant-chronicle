@@ -423,11 +423,36 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     if (isBossFloor) {
       monsters.push(makeMonster(nextId++, end.x, end.y - 1 >= 0 ? end.y - 1 : end.y, floor, true));
     }
+
+    // NPC spawn — one wanderer per floor from floor 2 onward, 65% chance.
+    if (floor >= 2 && rand() < 0.65 && rooms.length > 2) {
+      const biomeNow = biomeForFloor(floor);
+      const tpl = pickNpcTemplate(biomeNow.id, floor);
+      if (tpl) {
+        for (let tries2 = 0; tries2 < 40; tries2++) {
+          const rIdx = 1 + Math.floor(rand() * (rooms.length - 2));
+          const room = rooms[rIdx];
+          const nx = ri(room.x, room.x + room.w - 1);
+          const ny = ri(room.y, room.y + room.h - 1);
+          if (nx === end.x && ny === end.y) continue;
+          if (nx === start.x && ny === start.y) continue;
+          if (tiles[ny][nx].kind !== "floor") continue;
+          if (monsters.some((m) => m.x === nx && m.y === ny)) continue;
+          if (items.some((it) => it.x === nx && it.y === ny)) continue;
+          tiles[ny][nx].kind = "npc";
+          npcs.push({
+            id: nextId++, x: nx, y: ny,
+            templateId: tpl.id, name: tpl.name, glyph: tpl.glyph, tone: tpl.tone,
+          });
+          break;
+        }
+      }
+    }
   }
 
   const biome = biomeForFloor(floor);
   const state: GameState = {
-    width, height, tiles, monsters, items, player,
+    width, height, tiles, monsters, items, npcs, pendingNpcId: null, player,
     floor, turn: 0,
     log: [
       { t: "system", m: sanctuary ? `You enter the Sanctuary at Floor ${floor}.` : `Descended to Floor ${floor} — ${biome.name}.` },
