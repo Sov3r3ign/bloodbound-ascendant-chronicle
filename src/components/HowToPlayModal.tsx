@@ -77,7 +77,8 @@ export function HowToPlayModal({
     onClose();
   }
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm px-4 py-8 animate-in fade-in duration-300 overflow-y-auto"
       role="dialog"
