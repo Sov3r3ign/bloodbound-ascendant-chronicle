@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { BookOpen } from "lucide-react";
 
 const KEY = "bloodbound.howto.seen";
