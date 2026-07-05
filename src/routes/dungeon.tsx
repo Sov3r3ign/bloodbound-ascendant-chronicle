@@ -7,12 +7,14 @@ import { loadCharacter, type StoredCharacter } from "@/lib/character-storage";
 import {
   biomeForFloor,
   buyOffer,
+  dismissNpc,
   generateDungeon,
   invokeShrine,
   makePlayer,
   powerFor,
   quaffElixir,
   quaffPotion,
+  resolveNpc,
   step,
   TIER_NAMES,
   TIER_XP,
@@ -22,6 +24,7 @@ import {
   type ShopOffer,
   type StatusKey,
 } from "@/lib/dungeon-engine";
+import { NpcDialogueModal } from "@/components/NpcDialogueModal";
 import { loadMeta, nextUnlock, purchaseUnlock, recordRun, type MetaState } from "@/lib/meta-storage";
 import { beastImage } from "@/lib/beast-images";
 import { FloorIntroModal } from "@/components/FloorIntroModal";
