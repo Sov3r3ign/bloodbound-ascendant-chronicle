@@ -2,7 +2,7 @@
 // Expanded: status effects, traps, shrines, chests, equipment, sanctuary floors,
 // narrative events, and run statistics.
 
-export type TileKind = "wall" | "floor" | "door" | "stairs" | "shrine" | "trap" | "chest";
+export type TileKind = "wall" | "floor" | "door" | "stairs" | "shrine" | "trap" | "chest" | "npc";
 export type Tile = { kind: TileKind; seen: boolean; visible: boolean; revealed?: boolean };
 
 export type StatusKey = "bleed" | "burn" | "poison" | "blessed" | "rooted";
