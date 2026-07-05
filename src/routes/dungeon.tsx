@@ -705,6 +705,10 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
                 glyph = "·";
                 tone = "text-muted-foreground/40";
               }
+            } else if (tile.kind === "npc") {
+              bg = "bg-bone/10";
+              glyph = "&";
+              tone = "text-bone text-glow animate-flicker";
             } else {
               bg = tile.visible ? "bg-card/70" : "bg-card/30";
               glyph = "·";
