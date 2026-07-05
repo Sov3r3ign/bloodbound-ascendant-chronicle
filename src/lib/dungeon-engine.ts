@@ -351,6 +351,7 @@ export function generateDungeon(width: number, height: number, floor: number, pl
 
   const monsters: Monster[] = [];
   const items: Item[] = [];
+  const npcs: NPC[] = [];
   let nextId = 1;
 
   if (sanctuary) {
