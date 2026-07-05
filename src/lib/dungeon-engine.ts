@@ -1,8 +1,9 @@
 // Bloodbound Ascendants — dungeon engine (procedural roguelike core)
 // Expanded: status effects, traps, shrines, chests, equipment, sanctuary floors,
 // narrative events, and run statistics.
+import { pickNpcTemplate } from "./npcs";
 
-export type TileKind = "wall" | "floor" | "door" | "stairs" | "shrine" | "trap" | "chest";
+export type TileKind = "wall" | "floor" | "door" | "stairs" | "shrine" | "trap" | "chest" | "npc";
 export type Tile = { kind: TileKind; seen: boolean; visible: boolean; revealed?: boolean };
 
 export type StatusKey = "bleed" | "burn" | "poison" | "blessed" | "rooted";
@@ -64,6 +65,16 @@ export type Item = {
   trinket?: Trinket;
 };
 
+export type NPC = {
+  id: number;
+  x: number;
+  y: number;
+  templateId: string;
+  name: string;
+  glyph: string;
+  tone: "blood" | "ember" | "arcane" | "bone";
+};
+
 export type Player = {
   x: number;
   y: number;
@@ -115,6 +126,8 @@ export type GameState = {
   tiles: Tile[][];
   monsters: Monster[];
   items: Item[];
+  npcs: NPC[];
+  pendingNpcId: number | null;
   player: Player;
   floor: number;
   turn: number;
@@ -339,6 +352,7 @@ export function generateDungeon(width: number, height: number, floor: number, pl
 
   const monsters: Monster[] = [];
   const items: Item[] = [];
+  const npcs: NPC[] = [];
   let nextId = 1;
 
   if (sanctuary) {
@@ -410,11 +424,36 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     if (isBossFloor) {
       monsters.push(makeMonster(nextId++, end.x, end.y - 1 >= 0 ? end.y - 1 : end.y, floor, true));
     }
+
+    // NPC spawn — one wanderer per floor from floor 2 onward, 65% chance.
+    if (floor >= 2 && rand() < 0.65 && rooms.length > 2) {
+      const biomeNow = biomeForFloor(floor);
+      const tpl = pickNpcTemplate(biomeNow.id, floor);
+      if (tpl) {
+        for (let tries2 = 0; tries2 < 40; tries2++) {
+          const rIdx = 1 + Math.floor(rand() * (rooms.length - 2));
+          const room = rooms[rIdx];
+          const nx = ri(room.x, room.x + room.w - 1);
+          const ny = ri(room.y, room.y + room.h - 1);
+          if (nx === end.x && ny === end.y) continue;
+          if (nx === start.x && ny === start.y) continue;
+          if (tiles[ny][nx].kind !== "floor") continue;
+          if (monsters.some((m) => m.x === nx && m.y === ny)) continue;
+          if (items.some((it) => it.x === nx && it.y === ny)) continue;
+          tiles[ny][nx].kind = "npc";
+          npcs.push({
+            id: nextId++, x: nx, y: ny,
+            templateId: tpl.id, name: tpl.name, glyph: tpl.glyph, tone: tpl.tone,
+          });
+          break;
+        }
+      }
+    }
   }
 
   const biome = biomeForFloor(floor);
   const state: GameState = {
-    width, height, tiles, monsters, items, player,
+    width, height, tiles, monsters, items, npcs, pendingNpcId: null, player,
     floor, turn: 0,
     log: [
       { t: "system", m: sanctuary ? `You enter the Sanctuary at Floor ${floor}.` : `Descended to Floor ${floor} — ${biome.name}.` },
@@ -708,6 +747,13 @@ export function step(s: GameState, dir: MoveDir): GameState {
   const [dx, dy] = DELTA[dir];
   const tx = next.player.x + dx;
   const ty = next.player.y + dy;
+  // Bump-to-talk: NPC on target tile → open dialogue, do not move, do not endTurn.
+  const npc = next.npcs.find((n) => n.x === tx && n.y === ty);
+  if (npc) {
+    next.pendingNpcId = npc.id;
+    pushLog(next, { t: "event", m: `${npc.name} regards you.` });
+    return next;
+  }
   const target = monsterAt(next, tx, ty);
   if (target) {
     attackMonster(next, target);
@@ -1290,6 +1336,7 @@ function clone(s: GameState): GameState {
     tiles: s.tiles.map((row) => row.map((t) => ({ ...t }))),
     monsters: s.monsters.map((m) => ({ ...m, statuses: { ...m.statuses }, phases: m.phases ? m.phases.map(p => ({ ...p })) : undefined })),
     items: s.items.map((i) => ({ ...i })),
+    npcs: s.npcs.map((n) => ({ ...n })),
     player: { ...s.player, equipment: { ...s.player.equipment }, statuses: { ...s.player.statuses } },
     log: s.log.slice(),
     flashes: s.flashes.slice(),
@@ -1297,4 +1344,25 @@ function clone(s: GameState): GameState {
     shop: s.shop ? s.shop.slice() : null,
     visitedRooms: new Set(s.visitedRooms),
   };
+}
+
+// ---- NPC actions ----
+export function dismissNpc(s: GameState): GameState {
+  if (s.pendingNpcId == null) return s;
+  const next = clone(s);
+  next.pendingNpcId = null;
+  return next;
+}
+
+export function resolveNpc(s: GameState, npcId: number): GameState {
+  const next = clone(s);
+  const npc = next.npcs.find((n) => n.id === npcId);
+  if (npc) {
+    if (next.tiles[npc.y]?.[npc.x]?.kind === "npc") {
+      next.tiles[npc.y][npc.x].kind = "floor";
+    }
+    next.npcs = next.npcs.filter((n) => n.id !== npcId);
+  }
+  next.pendingNpcId = null;
+  return next;
 }

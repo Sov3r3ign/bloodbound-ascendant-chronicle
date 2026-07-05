@@ -7,12 +7,14 @@ import { loadCharacter, type StoredCharacter } from "@/lib/character-storage";
 import {
   biomeForFloor,
   buyOffer,
+  dismissNpc,
   generateDungeon,
   invokeShrine,
   makePlayer,
   powerFor,
   quaffElixir,
   quaffPotion,
+  resolveNpc,
   step,
   TIER_NAMES,
   TIER_XP,
@@ -22,6 +24,7 @@ import {
   type ShopOffer,
   type StatusKey,
 } from "@/lib/dungeon-engine";
+import { NpcDialogueModal } from "@/components/NpcDialogueModal";
 import { loadMeta, nextUnlock, purchaseUnlock, recordRun, type MetaState } from "@/lib/meta-storage";
 import { beastImage } from "@/lib/beast-images";
 import { FloorIntroModal } from "@/components/FloorIntroModal";
@@ -165,6 +168,8 @@ function DungeonPage() {
   useEffect(() => {
     if (!game || !character) return;
     const onKey = (e: KeyboardEvent) => {
+      if (game.pendingNpcId != null) return; // modal owns keys
+      if (floorIntro) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const k = e.key.toLowerCase();
       const map: Record<string, MoveDir> = {
@@ -557,6 +562,25 @@ function DungeonPage() {
         />
       )}
 
+      {game.pendingNpcId != null && (() => {
+        const npc = game.npcs.find((n) => n.id === game.pendingNpcId);
+        if (!npc) return null;
+        return (
+          <NpcDialogueModal
+            templateId={npc.templateId}
+            onChoice={(c: FloorChoice) => {
+              setGame((g) => {
+                if (!g) return g;
+                const res = applyFloorChoice(g, saga, c);
+                setSaga(res.saga);
+                return resolveNpc(res.game, npc.id);
+              });
+            }}
+            onClose={() => setGame((g) => (g ? (g.npcs.some((n) => n.id === npc.id) ? dismissNpc(g) : g) : g))}
+          />
+        );
+      })()}
+
       {levelBurst !== null && (
         <LevelUpBurst tier={levelBurst} onDone={() => setLevelBurst(null)} />
       )}
@@ -648,6 +672,7 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
           const tile = game.tiles[y][x];
           const isPlayer = game.player.x === x && game.player.y === y;
           const monster = tile.visible ? game.monsters.find((m) => m.x === x && m.y === y && m.hp > 0) : undefined;
+          const npc = tile.visible ? game.npcs.find((n) => n.x === x && n.y === y) : undefined;
           const item = tile.visible ? game.items.find((i) => i.x === x && i.y === y) : undefined;
           const adjacent = !isPlayer && Math.abs(x - game.player.x) + Math.abs(y - game.player.y) === 1;
 
@@ -680,6 +705,10 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
                 glyph = "·";
                 tone = "text-muted-foreground/40";
               }
+            } else if (tile.kind === "npc") {
+              bg = "bg-bone/10";
+              glyph = "&";
+              tone = "text-bone text-glow animate-flicker";
             } else {
               bg = tile.visible ? "bg-card/70" : "bg-card/30";
               glyph = "·";
@@ -706,6 +735,14 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
                 : monster.tone === "arcane" ? "text-arcane"
                 : "text-bone";
             }
+            if (npc) {
+              glyph = npc.glyph;
+              tone =
+                npc.tone === "blood" ? "text-blood text-glow animate-flicker"
+                : npc.tone === "ember" ? "text-ember text-glow-ember animate-flicker"
+                : npc.tone === "arcane" ? "text-arcane text-glow animate-flicker"
+                : "text-bone text-glow animate-flicker";
+            }
             if (isPlayer) {
               glyph = "@";
               tone = "text-bone text-glow";
@@ -723,6 +760,7 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
               style={{ width: CELL, height: CELL }}
               title={
                 monster ? `${monster.name} · ${monster.hp}/${monster.maxHp}${monsterStatusText(monster.statuses)}`
+                  : npc ? `${npc.name} — bump to speak`
                   : item ? itemTitle(item)
                   : tile.kind === "shrine" ? "Shrine — invoke with [R]"
                   : tile.kind === "chest" ? "Chest — step onto it"
