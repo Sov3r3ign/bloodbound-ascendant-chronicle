@@ -168,6 +168,8 @@ function DungeonPage() {
   useEffect(() => {
     if (!game || !character) return;
     const onKey = (e: KeyboardEvent) => {
+      if (game.pendingNpcId != null) return; // modal owns keys
+      if (floorIntro) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const k = e.key.toLowerCase();
       const map: Record<string, MoveDir> = {
