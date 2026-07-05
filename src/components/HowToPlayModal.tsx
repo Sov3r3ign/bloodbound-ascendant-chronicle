@@ -142,7 +142,8 @@ export function HowToPlayModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
