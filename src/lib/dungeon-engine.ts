@@ -125,6 +125,8 @@ export type GameState = {
   tiles: Tile[][];
   monsters: Monster[];
   items: Item[];
+  npcs: NPC[];
+  pendingNpcId: number | null;
   player: Player;
   floor: number;
   turn: number;
