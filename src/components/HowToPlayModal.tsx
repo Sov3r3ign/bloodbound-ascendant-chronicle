@@ -78,17 +78,17 @@ export function HowToPlayModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm px-4 py-8 animate-in fade-in duration-300"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm px-4 py-8 animate-in fade-in duration-300 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label="How to Play"
     >
-      <div className="relative w-full max-w-2xl rounded-sm border border-arcane/40 bg-card/95 shadow-arcane">
-        <div className="border-b border-border/60 px-8 py-5 text-center">
+      <div className="relative w-full max-w-2xl my-auto flex flex-col max-h-[calc(100vh-4rem)] rounded-sm border border-arcane/40 bg-card/95 shadow-arcane">
+        <div className="border-b border-border/60 px-8 py-5 text-center shrink-0">
           <div className="font-display text-[10px] tracking-[0.5em] text-arcane">PRIMER</div>
           <div className="mt-2 font-display text-3xl tracking-[0.3em] text-glow">HOW TO PLAY</div>
         </div>
-        <div className="px-8 py-8 min-h-[300px]">
+        <div className="px-8 py-6 overflow-y-auto flex-1">
           <h2 className="font-display text-sm tracking-[0.3em] text-arcane">{section.title.toUpperCase()}</h2>
           <ul className="mt-5 space-y-3 font-serif text-[15px] leading-relaxed text-foreground/90">
             {section.lines.map((l, i) => (
@@ -96,7 +96,7 @@ export function HowToPlayModal({
             ))}
           </ul>
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-border/60 px-8 py-5">
+        <div className="flex items-center justify-between gap-4 border-t border-border/60 px-8 py-5 shrink-0">
           <div className="flex items-center gap-2">
             {SECTIONS.map((_, i) => (
               <span
