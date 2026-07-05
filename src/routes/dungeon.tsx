@@ -760,6 +760,7 @@ function DungeonGrid({ game, onCellClick }: { game: GameState; onCellClick: (x: 
               style={{ width: CELL, height: CELL }}
               title={
                 monster ? `${monster.name} · ${monster.hp}/${monster.maxHp}${monsterStatusText(monster.statuses)}`
+                  : npc ? `${npc.name} — bump to speak`
                   : item ? itemTitle(item)
                   : tile.kind === "shrine" ? "Shrine — invoke with [R]"
                   : tile.kind === "chest" ? "Chest — step onto it"
