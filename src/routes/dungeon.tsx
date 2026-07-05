@@ -562,6 +562,25 @@ function DungeonPage() {
         />
       )}
 
+      {game.pendingNpcId != null && (() => {
+        const npc = game.npcs.find((n) => n.id === game.pendingNpcId);
+        if (!npc) return null;
+        return (
+          <NpcDialogueModal
+            templateId={npc.templateId}
+            onChoice={(c: FloorChoice) => {
+              setGame((g) => {
+                if (!g) return g;
+                const res = applyFloorChoice(g, saga, c);
+                setSaga(res.saga);
+                return resolveNpc(res.game, npc.id);
+              });
+            }}
+            onClose={() => setGame((g) => (g ? (g.npcs.some((n) => n.id === npc.id) ? dismissNpc(g) : g) : g))}
+          />
+        );
+      })()}
+
       {levelBurst !== null && (
         <LevelUpBurst tier={levelBurst} onDone={() => setLevelBurst(null)} />
       )}
