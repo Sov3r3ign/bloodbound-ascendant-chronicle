@@ -1336,6 +1336,7 @@ function clone(s: GameState): GameState {
     tiles: s.tiles.map((row) => row.map((t) => ({ ...t }))),
     monsters: s.monsters.map((m) => ({ ...m, statuses: { ...m.statuses }, phases: m.phases ? m.phases.map(p => ({ ...p })) : undefined })),
     items: s.items.map((i) => ({ ...i })),
+    npcs: s.npcs.map((n) => ({ ...n })),
     player: { ...s.player, equipment: { ...s.player.equipment }, statuses: { ...s.player.statuses } },
     log: s.log.slice(),
     flashes: s.flashes.slice(),
@@ -1343,4 +1344,25 @@ function clone(s: GameState): GameState {
     shop: s.shop ? s.shop.slice() : null,
     visitedRooms: new Set(s.visitedRooms),
   };
+}
+
+// ---- NPC actions ----
+export function dismissNpc(s: GameState): GameState {
+  if (s.pendingNpcId == null) return s;
+  const next = clone(s);
+  next.pendingNpcId = null;
+  return next;
+}
+
+export function resolveNpc(s: GameState, npcId: number): GameState {
+  const next = clone(s);
+  const npc = next.npcs.find((n) => n.id === npcId);
+  if (npc) {
+    if (next.tiles[npc.y]?.[npc.x]?.kind === "npc") {
+      next.tiles[npc.y][npc.x].kind = "floor";
+    }
+    next.npcs = next.npcs.filter((n) => n.id !== npcId);
+  }
+  next.pendingNpcId = null;
+  return next;
 }
