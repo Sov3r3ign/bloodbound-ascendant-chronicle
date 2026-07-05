@@ -64,6 +64,16 @@ export type Item = {
   trinket?: Trinket;
 };
 
+export type NPC = {
+  id: number;
+  x: number;
+  y: number;
+  templateId: string;
+  name: string;
+  glyph: string;
+  tone: "blood" | "ember" | "arcane" | "bone";
+};
+
 export type Player = {
   x: number;
   y: number;
