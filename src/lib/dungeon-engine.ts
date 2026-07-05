@@ -1,6 +1,7 @@
 // Bloodbound Ascendants — dungeon engine (procedural roguelike core)
 // Expanded: status effects, traps, shrines, chests, equipment, sanctuary floors,
 // narrative events, and run statistics.
+import { pickNpcTemplate } from "./npcs";
 
 export type TileKind = "wall" | "floor" | "door" | "stairs" | "shrine" | "trap" | "chest" | "npc";
 export type Tile = { kind: TileKind; seen: boolean; visible: boolean; revealed?: boolean };
