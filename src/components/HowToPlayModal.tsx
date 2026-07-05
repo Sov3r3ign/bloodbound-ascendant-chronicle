@@ -96,7 +96,7 @@ export function HowToPlayModal({
             ))}
           </ul>
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-border/60 px-8 py-5">
+        <div className="flex items-center justify-between gap-4 border-t border-border/60 px-8 py-5 shrink-0">
           <div className="flex items-center gap-2">
             {SECTIONS.map((_, i) => (
               <span
