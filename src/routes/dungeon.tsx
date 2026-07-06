@@ -373,7 +373,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Map */}
-          <RuneFrame className="p-3">
+          <RuneFrame className="p-3 min-w-0">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
                 {game.isSanctuary ? "THE SANCTUARY" : "THE DUNGEON"}
