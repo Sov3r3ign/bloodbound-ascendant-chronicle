@@ -604,26 +604,21 @@ function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: str
     return () => window.removeEventListener("keydown", onKey, true);
   }, [onClose]);
   if (!img) return null;
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm animate-in fade-in"
+      className="fixed inset-0 z-[85] flex items-start sm:items-center justify-center overflow-y-auto bg-black/85 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={`Encounter: ${name}`}
     >
       <div
-        className="relative max-w-lg w-full overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune"
+        className="relative my-auto max-w-lg w-full overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-square w-full overflow-hidden">
-          <img
-            src={img}
-            alt={name}
-            width={1024}
-            height={1024}
-            className="h-full w-full object-cover"
-          />
+          <img src={img} alt={name} width={1024} height={1024} className="h-full w-full object-cover" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
           <div className="absolute left-0 right-0 top-3 text-center">
             <div className={`font-display text-[10px] tracking-[0.5em] ${isBoss ? "text-blood" : "text-arcane"} animate-flicker`}>
@@ -637,7 +632,7 @@ function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: str
         </div>
         <div className="p-5">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
+            <h2 className="font-display text-xl sm:text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
             <span className={`shrink-0 font-display text-[10px] tracking-widest ${isBoss ? "text-blood" : "text-arcane"}`}>
               {isBoss ? "BOSS" : "BEAST"} · LVL {level}
             </span>
@@ -652,7 +647,8 @@ function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: str
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
