@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { biomeForFloor } from "@/lib/dungeon-engine";
 import { biomeImage } from "@/lib/biome-images";
 import {
@@ -60,15 +61,17 @@ export function FloorIntroModal({ floor, isSanctuary, saga, onChoice, onClose }:
   const repLabel =
     rep >= 2 ? "FAVOURED" : rep <= -2 ? "MARKED" : rep > 0 ? "NOTED" : rep < 0 ? "RESENTED" : null;
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm animate-in fade-in"
+      className="fixed inset-0 z-[80] flex items-start sm:items-center justify-center overflow-y-auto bg-black/85 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in"
       role="dialog"
       aria-modal="true"
       aria-label={`Floor ${floor} — ${biome.name}`}
     >
-      <div className="relative w-full max-w-xl overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune">
-        <div className="relative h-44 overflow-hidden border-b border-arcane/30">
+      <div className="relative my-auto w-full max-w-xl overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune">
+        <div className="relative h-32 sm:h-44 overflow-hidden border-b border-arcane/30">
           <img
             src={biomeImage(biome.id)}
             alt={biome.name}
@@ -155,6 +158,7 @@ export function FloorIntroModal({ floor, isSanctuary, saga, onChoice, onClose }:
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

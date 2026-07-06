@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { ASPECTS, RACES, TIERS } from "@/lib/game-data";
@@ -294,9 +295,9 @@ function DungeonPage() {
         </div>
 
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr_320px]">
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
           {/* Left column: vitals + equipment */}
-          <RuneFrame className="p-4">
+          <RuneFrame className="p-4 min-w-0">
             <div className="font-display text-[10px] tracking-[0.4em] text-arcane">VITALS</div>
             <Bar label="VIGOR" value={game.player.hp} max={game.player.maxHp} tone="blood" />
             <Bar label="FOCUS" value={game.player.focus} max={game.player.maxFocus} tone="arcane" />
@@ -372,7 +373,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Map */}
-          <RuneFrame className="p-3">
+          <RuneFrame className="p-3 min-w-0">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
                 {game.isSanctuary ? "THE SANCTUARY" : "THE DUNGEON"}
@@ -388,33 +389,41 @@ function DungeonPage() {
                 <span><span className="text-arcane">&gt;</span> STAIRS</span>
               </div>
             </div>
-            <div
-              className={`relative mx-auto select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
-              style={{ width: GRID_W * CELL, maxWidth: "100%", aspectRatio: `${GRID_W} / ${GRID_H}` }}
-            >
-              <DungeonGrid game={game} onCellClick={onCellClick} />
-              {/* fog vignette */}
-              <div className="pointer-events-none absolute inset-0 fog-vignette" />
-              {/* player halo */}
+            <div className="w-full overflow-x-auto">
               <div
-                className="pointer-events-none absolute player-halo"
-                style={{
-                  width: CELL * 7,
-                  height: CELL * 7,
-                  left: game.player.x * CELL + CELL / 2 - (CELL * 7) / 2,
-                  top: game.player.y * CELL + CELL / 2 - (CELL * 7) / 2,
-                  transition: "left 0.12s linear, top 0.12s linear",
-                }}
-              />
+                className={`relative select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
+                style={{ width: GRID_W * CELL, height: GRID_H * CELL, maxWidth: "100%" }}
+              >
+                <DungeonGrid game={game} onCellClick={onCellClick} />
+                {/* fog vignette */}
+                <div className="pointer-events-none absolute inset-0 fog-vignette" />
+                {/* player halo */}
+                <div
+                  className="pointer-events-none absolute player-halo"
+                  style={{
+                    width: CELL * 7,
+                    height: CELL * 7,
+                    left: game.player.x * CELL + CELL / 2 - (CELL * 7) / 2,
+                    top: game.player.y * CELL + CELL / 2 - (CELL * 7) / 2,
+                    transition: "left 0.12s linear, top 0.12s linear",
+                  }}
+                />
 
-              {/* overlays */}
-              {game.status === "dead" && meta && (
-                <DeathSummary game={game} meta={meta} character={character} onRestart={() => { recordedRef.current = false; restart(); }} onMeta={() => setMeta(loadMeta())} />
-              )}
-              {game.status === "ascended" && (
-                <Overlay title="The Stair Opens" subtitle={`Floor ${game.floor + 1} awaits…`} />
-              )}
+                {/* overlays */}
+                {game.status === "dead" && meta && (
+                  <DeathSummary game={game} meta={meta} character={character} onRestart={() => { recordedRef.current = false; restart(); }} onMeta={() => setMeta(loadMeta())} />
+                )}
+                {game.status === "ascended" && (
+                  <Overlay title="The Stair Opens" subtitle={`Floor ${game.floor + 1} awaits…`} />
+                )}
+              </div>
             </div>
+
+            {/* Touch D-Pad for mobile */}
+            <TouchDpad
+              onDir={(d) => setGame((g) => (g ? step(g, d) : g))}
+              disabled={game.status !== "playing"}
+            />
 
             {/* Skill bar */}
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -470,7 +479,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Right column: foes + dice + log */}
-          <RuneFrame className="flex flex-col p-4">
+          <RuneFrame className="flex flex-col p-4 min-w-0">
             <FoesInSight game={game} />
             <div className="mt-3 font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLE</div>
             {game.lastDice && (
@@ -588,7 +597,37 @@ function DungeonPage() {
   );
 }
 
-// ---------- Beast Encounter Modal ----------
+// ---------- Touch D-Pad (mobile) ----------
+function TouchDpad({ onDir, disabled }: { onDir: (d: MoveDir) => void; disabled?: boolean }) {
+  const btn = "flex items-center justify-center rounded-md border-2 border-arcane/40 bg-card/60 font-display text-lg text-arcane active:bg-arcane/20 active:text-glow disabled:opacity-30 touch-manipulation select-none";
+  const trigger = (d: MoveDir) => (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!disabled) onDir(d);
+  };
+  return (
+    <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:hidden">
+      <div className="text-center font-display text-[9px] tracking-[0.3em] text-muted-foreground">
+        MOVE
+      </div>
+      <div className="grid grid-cols-3 grid-rows-3 gap-1.5" style={{ width: 168 }}>
+        <div />
+        <button aria-label="Move north" className={`${btn} h-12`} disabled={disabled} onClick={trigger("n")}>▲</button>
+        <div />
+        <button aria-label="Move west" className={`${btn} h-12`} disabled={disabled} onClick={trigger("w")}>◀</button>
+        <button aria-label="Wait" className={`${btn} h-12 text-[9px] tracking-widest`} disabled={disabled} onClick={trigger("wait")}>WAIT</button>
+        <button aria-label="Move east" className={`${btn} h-12`} disabled={disabled} onClick={trigger("e")}>▶</button>
+        <div />
+        <button aria-label="Move south" className={`${btn} h-12`} disabled={disabled} onClick={trigger("s")}>▼</button>
+        <div />
+      </div>
+      <div className="text-center font-display text-[9px] tracking-[0.3em] text-muted-foreground">
+        TAP TILE
+      </div>
+    </div>
+  );
+}
+
+
 function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: string; level: number; desc: string; isBoss: boolean; onClose: () => void }) {
   const img = beastImage(name);
   useEffect(() => {
@@ -603,26 +642,21 @@ function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: str
     return () => window.removeEventListener("keydown", onKey, true);
   }, [onClose]);
   if (!img) return null;
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm animate-in fade-in"
+      className="fixed inset-0 z-[85] flex items-start sm:items-center justify-center overflow-y-auto bg-black/85 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={`Encounter: ${name}`}
     >
       <div
-        className="relative max-w-lg w-full overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune"
+        className="relative my-auto max-w-lg w-full overflow-hidden rounded-sm border border-arcane/60 bg-card shadow-rune"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-square w-full overflow-hidden">
-          <img
-            src={img}
-            alt={name}
-            width={1024}
-            height={1024}
-            className="h-full w-full object-cover"
-          />
+          <img src={img} alt={name} width={1024} height={1024} className="h-full w-full object-cover" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
           <div className="absolute left-0 right-0 top-3 text-center">
             <div className={`font-display text-[10px] tracking-[0.5em] ${isBoss ? "text-blood" : "text-arcane"} animate-flicker`}>
@@ -636,7 +670,7 @@ function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: str
         </div>
         <div className="p-5">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
+            <h2 className="font-display text-xl sm:text-2xl tracking-widest text-bone text-glow">{name.toUpperCase()}</h2>
             <span className={`shrink-0 font-display text-[10px] tracking-widest ${isBoss ? "text-blood" : "text-arcane"}`}>
               {isBoss ? "BOSS" : "BEAST"} · LVL {level}
             </span>
@@ -651,7 +685,8 @@ function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: str
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
