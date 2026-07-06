@@ -158,6 +158,7 @@ export function FloorIntroModal({ floor, isSanctuary, saga, onChoice, onClose }:
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
