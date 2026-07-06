@@ -389,33 +389,41 @@ function DungeonPage() {
                 <span><span className="text-arcane">&gt;</span> STAIRS</span>
               </div>
             </div>
-            <div
-              className={`relative mx-auto select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
-              style={{ width: GRID_W * CELL, maxWidth: "100%", aspectRatio: `${GRID_W} / ${GRID_H}` }}
-            >
-              <DungeonGrid game={game} onCellClick={onCellClick} />
-              {/* fog vignette */}
-              <div className="pointer-events-none absolute inset-0 fog-vignette" />
-              {/* player halo */}
+            <div className="w-full overflow-x-auto">
               <div
-                className="pointer-events-none absolute player-halo"
-                style={{
-                  width: CELL * 7,
-                  height: CELL * 7,
-                  left: game.player.x * CELL + CELL / 2 - (CELL * 7) / 2,
-                  top: game.player.y * CELL + CELL / 2 - (CELL * 7) / 2,
-                  transition: "left 0.12s linear, top 0.12s linear",
-                }}
-              />
+                className={`relative select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
+                style={{ width: GRID_W * CELL, height: GRID_H * CELL, maxWidth: "100%" }}
+              >
+                <DungeonGrid game={game} onCellClick={onCellClick} />
+                {/* fog vignette */}
+                <div className="pointer-events-none absolute inset-0 fog-vignette" />
+                {/* player halo */}
+                <div
+                  className="pointer-events-none absolute player-halo"
+                  style={{
+                    width: CELL * 7,
+                    height: CELL * 7,
+                    left: game.player.x * CELL + CELL / 2 - (CELL * 7) / 2,
+                    top: game.player.y * CELL + CELL / 2 - (CELL * 7) / 2,
+                    transition: "left 0.12s linear, top 0.12s linear",
+                  }}
+                />
 
-              {/* overlays */}
-              {game.status === "dead" && meta && (
-                <DeathSummary game={game} meta={meta} character={character} onRestart={() => { recordedRef.current = false; restart(); }} onMeta={() => setMeta(loadMeta())} />
-              )}
-              {game.status === "ascended" && (
-                <Overlay title="The Stair Opens" subtitle={`Floor ${game.floor + 1} awaits…`} />
-              )}
+                {/* overlays */}
+                {game.status === "dead" && meta && (
+                  <DeathSummary game={game} meta={meta} character={character} onRestart={() => { recordedRef.current = false; restart(); }} onMeta={() => setMeta(loadMeta())} />
+                )}
+                {game.status === "ascended" && (
+                  <Overlay title="The Stair Opens" subtitle={`Floor ${game.floor + 1} awaits…`} />
+                )}
+              </div>
             </div>
+
+            {/* Touch D-Pad for mobile */}
+            <TouchDpad
+              onDir={(d) => setGame((g) => (g ? step(g, d) : g))}
+              disabled={game.status !== "playing"}
+            />
 
             {/* Skill bar */}
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
