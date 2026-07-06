@@ -19,7 +19,9 @@ export function SiteHeader() {
           <Link to="/chronicler" className="transition-colors hover:text-arcane [&.active]:text-arcane">CHRONICLER</Link>
         </nav>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <HowToPlayButton className="hidden md:inline-flex" />
+          <div className="hidden md:block">
+            <HowToPlayButton />
+          </div>
           <Link
             to="/create"
             className="shrink-0 whitespace-nowrap rounded-sm border border-arcane/40 bg-gradient-arcane px-3 py-1.5 font-display text-[11px] tracking-widest text-bone shadow-rune transition-all hover:shadow-arcane sm:px-4 sm:py-2 sm:text-xs"
