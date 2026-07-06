@@ -597,7 +597,37 @@ function DungeonPage() {
   );
 }
 
-// ---------- Beast Encounter Modal ----------
+// ---------- Touch D-Pad (mobile) ----------
+function TouchDpad({ onDir, disabled }: { onDir: (d: MoveDir) => void; disabled?: boolean }) {
+  const btn = "flex items-center justify-center rounded-md border-2 border-arcane/40 bg-card/60 font-display text-lg text-arcane active:bg-arcane/20 active:text-glow disabled:opacity-30 touch-manipulation select-none";
+  const trigger = (d: MoveDir) => (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!disabled) onDir(d);
+  };
+  return (
+    <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:hidden">
+      <div className="text-center font-display text-[9px] tracking-[0.3em] text-muted-foreground">
+        MOVE
+      </div>
+      <div className="grid grid-cols-3 grid-rows-3 gap-1.5" style={{ width: 168 }}>
+        <div />
+        <button aria-label="Move north" className={`${btn} h-12`} disabled={disabled} onClick={trigger("n")}>▲</button>
+        <div />
+        <button aria-label="Move west" className={`${btn} h-12`} disabled={disabled} onClick={trigger("w")}>◀</button>
+        <button aria-label="Wait" className={`${btn} h-12 text-[9px] tracking-widest`} disabled={disabled} onClick={trigger("wait")}>WAIT</button>
+        <button aria-label="Move east" className={`${btn} h-12`} disabled={disabled} onClick={trigger("e")}>▶</button>
+        <div />
+        <button aria-label="Move south" className={`${btn} h-12`} disabled={disabled} onClick={trigger("s")}>▼</button>
+        <div />
+      </div>
+      <div className="text-center font-display text-[9px] tracking-[0.3em] text-muted-foreground">
+        TAP TILE
+      </div>
+    </div>
+  );
+}
+
+
 function BeastEncounterModal({ name, level, desc, isBoss, onClose }: { name: string; level: number; desc: string; isBoss: boolean; onClose: () => void }) {
   const img = beastImage(name);
   useEffect(() => {
