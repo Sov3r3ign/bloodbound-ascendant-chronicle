@@ -479,7 +479,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Right column: foes + dice + log */}
-          <RuneFrame className="flex flex-col p-4">
+          <RuneFrame className="flex flex-col p-4 min-w-0">
             <FoesInSight game={game} />
             <div className="mt-3 font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLE</div>
             {game.lastDice && (
