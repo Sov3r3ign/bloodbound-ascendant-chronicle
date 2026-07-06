@@ -295,9 +295,9 @@ function DungeonPage() {
         </div>
 
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr_320px]">
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
           {/* Left column: vitals + equipment */}
-          <RuneFrame className="p-4">
+          <RuneFrame className="p-4 min-w-0">
             <div className="font-display text-[10px] tracking-[0.4em] text-arcane">VITALS</div>
             <Bar label="VIGOR" value={game.player.hp} max={game.player.maxHp} tone="blood" />
             <Bar label="FOCUS" value={game.player.focus} max={game.player.maxFocus} tone="arcane" />
