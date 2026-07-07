@@ -13,7 +13,8 @@ export function SiteHeader() {
           </div>
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-display tracking-widest text-muted-foreground md:flex">
-          <Link to="/" className="transition-colors hover:text-arcane [&.active]:text-arcane">CODEX</Link>
+          <Link to="/" className="transition-colors hover:text-arcane [&.active]:text-arcane">MENU</Link>
+          <Link to="/codex" className="transition-colors hover:text-arcane [&.active]:text-arcane">CODEX</Link>
           <Link to="/create" className="transition-colors hover:text-arcane [&.active]:text-arcane">FORGE</Link>
           <Link to="/dungeon" className="transition-colors hover:text-arcane [&.active]:text-arcane">DUNGEON</Link>
           <Link to="/chronicler" className="transition-colors hover:text-arcane [&.active]:text-arcane">CHRONICLER</Link>
