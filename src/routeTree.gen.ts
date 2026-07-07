@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as DungeonRouteImport } from './routes/dungeon'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as CodexRouteImport } from './routes/codex'
 import { Route as ChroniclerRouteImport } from './routes/chronicler'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -30,6 +31,11 @@ const CreateRoute = CreateRouteImport.update({
   path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CodexRoute = CodexRouteImport.update({
+  id: '/codex',
+  path: '/codex',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChroniclerRoute = ChroniclerRouteImport.update({
   id: '/chronicler',
   path: '/chronicler',
@@ -44,6 +50,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chronicler': typeof ChroniclerRoute
+  '/codex': typeof CodexRoute
   '/create': typeof CreateRoute
   '/dungeon': typeof DungeonRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chronicler': typeof ChroniclerRoute
+  '/codex': typeof CodexRoute
   '/create': typeof CreateRoute
   '/dungeon': typeof DungeonRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -59,21 +67,36 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chronicler': typeof ChroniclerRoute
+  '/codex': typeof CodexRoute
   '/create': typeof CreateRoute
   '/dungeon': typeof DungeonRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chronicler' | '/create' | '/dungeon' | '/sitemap.xml'
+  fullPaths:
+    | '/'
+    | '/chronicler'
+    | '/codex'
+    | '/create'
+    | '/dungeon'
+    | '/sitemap.xml'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chronicler' | '/create' | '/dungeon' | '/sitemap.xml'
-  id: '__root__' | '/' | '/chronicler' | '/create' | '/dungeon' | '/sitemap.xml'
+  to: '/' | '/chronicler' | '/codex' | '/create' | '/dungeon' | '/sitemap.xml'
+  id:
+    | '__root__'
+    | '/'
+    | '/chronicler'
+    | '/codex'
+    | '/create'
+    | '/dungeon'
+    | '/sitemap.xml'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChroniclerRoute: typeof ChroniclerRoute
+  CodexRoute: typeof CodexRoute
   CreateRoute: typeof CreateRoute
   DungeonRoute: typeof DungeonRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -102,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/codex': {
+      id: '/codex'
+      path: '/codex'
+      fullPath: '/codex'
+      preLoaderRoute: typeof CodexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chronicler': {
       id: '/chronicler'
       path: '/chronicler'
@@ -122,6 +152,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChroniclerRoute: ChroniclerRoute,
+  CodexRoute: CodexRoute,
   CreateRoute: CreateRoute,
   DungeonRoute: DungeonRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -129,13 +160,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
