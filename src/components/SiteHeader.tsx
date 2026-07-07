@@ -5,12 +5,9 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
-        <Link to="/" className="group flex min-w-0 items-center gap-2 sm:gap-3">
-          <span className="shrink-0 text-2xl text-arcane animate-flicker">✦</span>
-          <div className="min-w-0 leading-tight">
-            <div className="truncate font-display text-[11px] tracking-[0.25em] text-arcane sm:text-sm sm:tracking-[0.3em]">BLOODBOUND</div>
-            <div className="truncate font-display text-[10px] tracking-[0.2em] text-muted-foreground sm:text-xs sm:tracking-[0.25em]">ASCENDANTS</div>
-          </div>
+        <Link to="/" aria-label="Main menu" className="group flex shrink-0 items-center gap-2 font-display text-[10px] tracking-[0.4em] text-muted-foreground transition-colors hover:text-arcane">
+          <span className="text-lg text-arcane animate-flicker">✦</span>
+          <span className="hidden sm:inline">MAIN MENU</span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-display tracking-widest text-muted-foreground md:flex">
           <Link to="/" className="transition-colors hover:text-arcane [&.active]:text-arcane">MENU</Link>
