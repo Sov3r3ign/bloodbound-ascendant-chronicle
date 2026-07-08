@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 
 export const Route = createFileRoute("/chronicler")({
@@ -32,7 +31,6 @@ const ACTIVITY = [
 function Chronicler() {
   return (
     <div className="min-h-screen">
-      <SiteHeader />
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="text-center">
           <div className="font-display text-[10px] tracking-[0.5em] text-arcane">CHRONICLER MODE</div>

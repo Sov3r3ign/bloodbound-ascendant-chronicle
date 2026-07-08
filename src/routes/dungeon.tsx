@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { ASPECTS, RACES, TIERS } from "@/lib/game-data";
 import { loadCharacter, type StoredCharacter } from "@/lib/character-storage";
@@ -71,6 +70,7 @@ function DungeonPage() {
   const [levelBurst, setLevelBurst] = useState<number | null>(null);
   const [combo, setCombo] = useState<{ n: number; lastTurn: number }>({ n: 0, lastTurn: -99 });
   const [muted, setMutedState] = useState<boolean>(() => isMuted());
+  const mapScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Show floor intro modal whenever we arrive on a new floor
   useEffect(() => {
@@ -192,6 +192,20 @@ function DungeonPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [game, character]);
 
+  // Keep the player centered inside the scrollable map viewport on mobile.
+  useEffect(() => {
+    if (!game) return;
+    const viewport = mapScrollRef.current;
+    if (!viewport) return;
+    const playerCenterX = game.player.x * CELL + CELL / 2;
+    const playerCenterY = game.player.y * CELL + CELL / 2;
+    viewport.scrollTo({
+      left: Math.max(0, playerCenterX - viewport.clientWidth / 2),
+      top: Math.max(0, playerCenterY - viewport.clientHeight / 2),
+      behavior: "smooth",
+    });
+  }, [game?.player.x, game?.player.y, game?.floor]);
+
   // Advance floor when ascended
   useEffect(() => {
     if (!game || !character) return;
@@ -223,7 +237,6 @@ function DungeonPage() {
   if (!character || !game) {
     return (
       <div className="min-h-screen">
-        <SiteHeader />
         <div className="mx-auto max-w-3xl px-6 py-20 text-center font-display tracking-widest text-arcane animate-flicker">
           AWAKENING THE DUNGEON…
         </div>
@@ -257,7 +270,6 @@ function DungeonPage() {
 
   return (
     <div className="min-h-screen">
-      <SiteHeader />
       <div className="mx-auto max-w-[1600px] px-4 py-6">
         {/* HUD top */}
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -389,10 +401,10 @@ function DungeonPage() {
                 <span><span className="text-arcane">&gt;</span> STAIRS</span>
               </div>
             </div>
-            <div className="w-full overflow-x-auto">
+            <div ref={mapScrollRef} className="w-full overflow-auto overscroll-contain rounded-sm scroll-smooth">
               <div
                 className={`relative select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
-                style={{ width: GRID_W * CELL, height: GRID_H * CELL, maxWidth: "100%" }}
+                style={{ width: GRID_W * CELL, height: GRID_H * CELL }}
               >
                 <DungeonGrid game={game} onCellClick={onCellClick} />
                 {/* fog vignette */}

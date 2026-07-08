@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { ASPECTS, RACES, RESONANCES, TIERS } from "@/lib/game-data";
 
@@ -18,8 +17,6 @@ export const Route = createFileRoute("/codex")({
 function Codex() {
   return (
     <div className="min-h-screen">
-      <SiteHeader />
-
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 opacity-50">
