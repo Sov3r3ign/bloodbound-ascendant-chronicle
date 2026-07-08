@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { SiteHeader } from "@/components/SiteHeader";
 import { RuneFrame } from "@/components/RuneFrame";
 import { InfoTip } from "@/components/InfoTip";
 import { RacePortrait, GenderIcon } from "@/components/RacePortrait";
@@ -62,7 +61,6 @@ function Forge() {
       className="min-h-screen race-themed"
       data-race-theme={raceId ?? undefined}
     >
-      <SiteHeader />
       <div className="mx-auto max-w-7xl px-6 py-10">
 
         {/* Stepper */}
@@ -577,7 +575,7 @@ function CharacterSheet({
   attention: number;
 }) {
   return (
-    <aside className="sticky top-24 self-start">
+    <aside className="sticky top-4 self-start">
       <RuneFrame className="p-5">
         <div className="flex flex-col items-center text-center">
           <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHARACTER SHEET</div>
