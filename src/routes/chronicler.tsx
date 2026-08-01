@@ -1,3 +1,4 @@
+import { MainMenuButton } from "@/components/MainMenuButton";
 import { createFileRoute } from "@tanstack/react-router";
 import { RuneFrame } from "@/components/RuneFrame";
 
@@ -31,6 +32,7 @@ const ACTIVITY = [
 function Chronicler() {
   return (
     <div className="min-h-screen">
+      <MainMenuButton />
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="text-center">
           <div className="font-display text-[10px] tracking-[0.5em] text-arcane">CHRONICLER MODE</div>
