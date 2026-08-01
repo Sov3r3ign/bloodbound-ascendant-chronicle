@@ -1,3 +1,4 @@
+import { MainMenuButton } from "@/components/MainMenuButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { RuneFrame } from "@/components/RuneFrame";
@@ -61,6 +62,7 @@ function Forge() {
       className="min-h-screen race-themed"
       data-race-theme={raceId ?? undefined}
     >
+      <MainMenuButton />
       <div className="mx-auto max-w-7xl px-6 py-10">
 
         {/* Stepper */}

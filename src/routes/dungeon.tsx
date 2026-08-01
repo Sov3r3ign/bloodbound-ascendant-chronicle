@@ -1,3 +1,4 @@
+import { MainMenuButton } from "@/components/MainMenuButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -270,6 +271,7 @@ function DungeonPage() {
 
   return (
     <div className="min-h-screen">
+      <MainMenuButton />
       <div className="mx-auto max-w-[1600px] px-4 py-6">
         {/* HUD top */}
         <div className="flex flex-wrap items-center justify-between gap-4">
