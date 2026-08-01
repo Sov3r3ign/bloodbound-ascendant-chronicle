@@ -25,13 +25,13 @@ function MainMenu() {
   const [splashStage, setSplashStage] = useState<0 | 1 | 2 | 3>(0);
   const [howto, setHowto] = useState(false);
   const [options, setOptions] = useState(false);
+  const [hasSave, setHasSave] = useState(false);
 
-  const hasSave = useMemo(() => {
-    if (typeof window === "undefined") return false;
+  useEffect(() => {
     try {
-      return !!localStorage.getItem("bloodbound.character") || !!loadMeta().lastRun;
+      setHasSave(!!localStorage.getItem("bloodbound.character") || !!loadMeta().lastRun);
     } catch {
-      return false;
+      setHasSave(false);
     }
   }, [options]); // recompute after possible reset
 
@@ -45,8 +45,7 @@ function MainMenu() {
         const t1 = setTimeout(() => setSplashStage(1), 500);
         const t2 = setTimeout(() => setSplashStage(2), 1600);
         const t3 = setTimeout(() => setSplashStage(3), 2800);
-        const t4 = setTimeout(() => setShowSplash(false), 4200);
-        return () => { [t1, t2, t3, t4].forEach(clearTimeout); };
+        return () => { [t1, t2, t3].forEach(clearTimeout); };
       }
     } catch {}
   }, []);
