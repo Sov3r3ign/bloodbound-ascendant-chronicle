@@ -33,16 +33,16 @@ function Chronicler() {
   return (
     <div className="min-h-screen">
       <MainMenuButton />
-      <div className="mx-auto max-w-7xl px-6 py-10">
+      <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-10">
         <div className="text-center">
           <div className="font-display text-[10px] tracking-[0.5em] text-arcane">CHRONICLER MODE</div>
-          <h1 className="mt-3 font-display text-4xl md:text-5xl text-glow">Be the Dungeon.</h1>
+          <h1 className="mt-3 font-display text-3xl sm:text-4xl md:text-5xl text-glow">Be the Dungeon.</h1>
           <p className="mx-auto mt-3 max-w-xl font-serif italic text-muted-foreground">
             Run sessions for your party. Spawn what hunts them, write what whispers to them, decide what answers.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="mt-8 grid gap-6 sm:mt-10 lg:grid-cols-[1fr_320px]">
           {/* Tools */}
           <RuneFrame className="p-6">
             <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLER TOOLS</div>

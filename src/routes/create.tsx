@@ -63,13 +63,14 @@ function Forge() {
       data-race-theme={raceId ?? undefined}
     >
       <MainMenuButton />
-      <div className="mx-auto max-w-7xl px-6 py-10">
+      <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-10">
 
         {/* Stepper */}
         <Stepper step={step} onStep={setStep} />
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-          <div className="min-h-[60vh]">
+        <div className="mt-6 grid gap-6 sm:mt-8 sm:gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="min-w-0 lg:min-h-[60vh]">
+
             {step === 0 && <IdentityStep name={name} setName={setName} gender={gender} setGender={setGender} />}
             {step === 1 && <BloodlineStep raceId={raceId} setRaceId={setRaceId} gender={gender} />}
             {step === 2 && <AspectStep aspectId={aspectId} setAspectId={setAspectId} />}
@@ -90,11 +91,11 @@ function Forge() {
               />
             )}
 
-            <div className="mt-10 flex items-center justify-between">
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10">
               <button
                 onClick={() => setStep((s) => Math.max(0, s - 1))}
                 disabled={step === 0}
-                className="rounded-sm border border-border px-6 py-2 font-display text-xs tracking-widest text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                className="rounded-sm border border-border px-4 py-2 font-display text-[11px] tracking-widest sm:px-6 sm:text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
               >
                 ← BACK
               </button>
@@ -102,7 +103,7 @@ function Forge() {
                 <button
                   onClick={() => canAdvance && setStep((s) => s + 1)}
                   disabled={!canAdvance}
-                  className="rounded-sm border border-arcane/40 bg-gradient-arcane px-8 py-2 font-display text-xs tracking-[0.3em] text-bone shadow-rune disabled:opacity-30"
+                  className="rounded-sm border border-arcane/40 bg-gradient-arcane px-5 py-2 font-display text-[11px] tracking-[0.3em] text-bone shadow-rune disabled:opacity-30 sm:px-8 sm:text-xs"
                 >
                   CONTINUE →
                 </button>
@@ -114,7 +115,7 @@ function Forge() {
                       saveCharacter({ name: name.trim(), gender, raceId, aspectId, resonanceIds, vitals });
                     }
                   }}
-                  className="rounded-sm border border-ember/50 bg-gradient-to-r from-ember/80 to-blood/80 px-8 py-2 font-display text-xs tracking-[0.3em] text-background shadow-arcane"
+                  className="rounded-sm border border-ember/50 bg-gradient-to-r from-ember/80 to-blood/80 px-5 py-2 font-display text-[11px] tracking-[0.3em] text-background shadow-arcane sm:px-8 sm:text-xs"
                 >
                   DESCEND →
                 </Link>
@@ -152,7 +153,7 @@ function Stepper({ step, onStep }: { step: number; onStep: (s: number) => void }
           <li key={label} className="flex items-center gap-2">
             <button
               onClick={() => i <= step && onStep(i)}
-              className={`flex items-center gap-2 rounded-sm border px-3 py-1.5 font-display text-[10px] tracking-[0.25em] transition-all ${
+              className={`flex items-center gap-1.5 rounded-sm border px-2 py-1.5 font-display text-[9px] tracking-[0.2em] transition-all sm:gap-2 sm:px-3 sm:text-[10px] sm:tracking-[0.25em] ${
                 active
                   ? "border-arcane bg-arcane/20 text-arcane shadow-rune"
                   : done
@@ -577,7 +578,7 @@ function CharacterSheet({
   attention: number;
 }) {
   return (
-    <aside className="sticky top-4 self-start">
+    <aside className="self-start lg:sticky lg:top-4">
       <RuneFrame className="p-5">
         <div className="flex flex-col items-center text-center">
           <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHARACTER SHEET</div>

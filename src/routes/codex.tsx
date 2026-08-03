@@ -25,26 +25,26 @@ function Codex() {
           <div className="absolute left-1/2 top-1/2 h-[60vmin] w-[60vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-arcane blur-3xl opacity-30 animate-rune" />
           <div className="absolute left-1/4 bottom-0 h-40 w-40 rounded-full bg-blood/30 blur-3xl" />
         </div>
-        <div className="relative mx-auto max-w-5xl px-6 pb-16 pt-16 text-center">
+        <div className="relative mx-auto max-w-5xl px-4 pb-12 pt-8 text-center sm:px-6 sm:pb-16 sm:pt-16">
           <div className="mb-6 font-display text-xs tracking-[0.5em] text-arcane">A LIVING-DUNGEON RPG</div>
-          <h1 className="text-glow font-display text-5xl leading-tight md:text-7xl">
+          <h1 className="text-glow font-display text-3xl leading-tight sm:text-5xl md:text-7xl">
             THE BLOODBOUND
             <br />
             <span className="text-arcane">ASCENDANTS</span>
           </h1>
-          <p className="mx-auto mt-8 max-w-2xl font-serif text-lg italic text-muted-foreground md:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl font-serif text-base italic text-muted-foreground sm:mt-8 sm:text-lg md:text-xl">
             "The dungeon does not sleep. It watches. It remembers. And when your blood begins to sing, it answers — with hunger."
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
               to="/create"
-              className="group inline-flex items-center gap-3 rounded-sm border border-arcane/40 bg-gradient-arcane px-8 py-3 font-display text-sm tracking-[0.3em] text-bone shadow-arcane transition-all hover:scale-[1.02]"
+              className="group inline-flex items-center gap-3 rounded-sm border border-arcane/40 bg-gradient-arcane px-6 py-3 sm:px-8 font-display text-sm tracking-[0.3em] text-bone shadow-arcane transition-all hover:scale-[1.02]"
             >
               FORGE AN ASCENDANT <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
             <Link
               to="/"
-              className="inline-flex items-center gap-3 rounded-sm border border-border bg-card/60 px-8 py-3 font-display text-sm tracking-[0.3em] text-foreground/90 hover:border-arcane/60"
+              className="inline-flex items-center gap-3 rounded-sm border border-border bg-card/60 px-6 py-3 sm:px-8 font-display text-sm tracking-[0.3em] text-foreground/90 hover:border-arcane/60"
             >
               ← MAIN MENU
             </Link>
@@ -53,7 +53,7 @@ function Codex() {
       </section>
 
       {/* Pillars */}
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
         <SectionTitle eyebrow="The Pact" title="Four Pillars of the Bound" />
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {[
@@ -71,7 +71,7 @@ function Codex() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-12">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
         <SectionTitle eyebrow="Codex I" title="The Nine Bloodlines" />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {RACES.map((r) => (
@@ -95,7 +95,7 @@ function Codex() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-12">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
         <SectionTitle eyebrow="Codex II" title="The Ten Aspects" />
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           {ASPECTS.map((a) => (
@@ -115,7 +115,7 @@ function Codex() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-12">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
         <SectionTitle eyebrow="Codex III" title="Resonances — The Dungeon Notices" />
         <p className="mx-auto mt-4 max-w-2xl text-center font-serif italic text-muted-foreground">
           Every gift you accept tightens the gaze of the dungeon. Wear too many, and it sends its finest hunters.
@@ -134,7 +134,7 @@ function Codex() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-16">
+      <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
         <SectionTitle eyebrow="Codex IV" title="Ascension Tiers" />
         <ol className="mt-10 relative border-l border-arcane/30 pl-8">
           {TIERS.map((t) => (

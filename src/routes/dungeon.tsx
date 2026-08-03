@@ -272,19 +272,19 @@ function DungeonPage() {
   return (
     <div className="min-h-screen">
       <MainMenuButton />
-      <div className="mx-auto max-w-[1600px] px-4 py-6">
+      <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-6">
         {/* HUD top */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className={`font-display text-[10px] tracking-[0.4em] ${biomeForFloor(game.floor).accentClass}`}>
+        <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
+          <div className="min-w-0">
+            <div className={`font-display text-[9px] tracking-[0.3em] sm:text-[10px] sm:tracking-[0.4em] ${biomeForFloor(game.floor).accentClass}`}>
               {game.isSanctuary ? "SANCTUARY · " : ""}FLOOR {romanize(game.floor)} · {biomeForFloor(game.floor).name.toUpperCase()}
             </div>
-            <h1 className="font-display text-2xl md:text-3xl text-glow">{character.name}</h1>
-            <div className="mt-0.5 font-serif text-sm italic text-muted-foreground">
+            <h1 className="truncate font-display text-xl text-glow sm:text-2xl md:text-3xl">{character.name}</h1>
+            <div className="mt-0.5 font-serif text-xs italic text-muted-foreground sm:text-sm">
               {race?.name} · {aspect?.name} <span className="text-muted-foreground/60">·</span> <span className="italic">{biomeForFloor(game.floor).subtitle}</span>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-start gap-2 sm:items-end">
             <div className="flex items-center gap-2">
               {combo.n >= 2 && game.turn - combo.lastTurn <= 3 && (
                 <div className="rounded-sm border border-ember/60 bg-ember/10 px-2 py-1 font-display text-[10px] tracking-widest text-ember shadow-rune animate-float-up">
@@ -309,9 +309,10 @@ function DungeonPage() {
         </div>
 
 
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
           {/* Left column: vitals + equipment */}
-          <RuneFrame className="p-4 min-w-0">
+          <RuneFrame className="order-2 p-4 min-w-0 lg:order-none">
+
             <div className="font-display text-[10px] tracking-[0.4em] text-arcane">VITALS</div>
             <Bar label="VIGOR" value={game.player.hp} max={game.player.maxHp} tone="blood" />
             <Bar label="FOCUS" value={game.player.focus} max={game.player.maxFocus} tone="arcane" />
@@ -387,7 +388,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Map */}
-          <RuneFrame className="p-3 min-w-0">
+          <RuneFrame className="order-1 p-2 min-w-0 sm:p-3 lg:order-none">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
                 {game.isSanctuary ? "THE SANCTUARY" : "THE DUNGEON"}
@@ -493,7 +494,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Right column: foes + dice + log */}
-          <RuneFrame className="flex flex-col p-4 min-w-0">
+          <RuneFrame className="order-3 flex flex-col p-4 min-w-0 lg:order-none">
             <FoesInSight game={game} />
             <div className="mt-3 font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLE</div>
             {game.lastDice && (
