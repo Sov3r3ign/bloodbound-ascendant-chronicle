@@ -388,7 +388,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Map */}
-          <RuneFrame className="p-3 min-w-0">
+          <RuneFrame className="order-1 p-2 min-w-0 sm:p-3 lg:order-none">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
                 {game.isSanctuary ? "THE SANCTUARY" : "THE DUNGEON"}
@@ -494,7 +494,7 @@ function DungeonPage() {
           </RuneFrame>
 
           {/* Right column: foes + dice + log */}
-          <RuneFrame className="flex flex-col p-4 min-w-0">
+          <RuneFrame className="order-3 flex flex-col p-4 min-w-0 lg:order-none">
             <FoesInSight game={game} />
             <div className="mt-3 font-display text-[10px] tracking-[0.4em] text-arcane">CHRONICLE</div>
             {game.lastDice && (
