@@ -63,13 +63,14 @@ function Forge() {
       data-race-theme={raceId ?? undefined}
     >
       <MainMenuButton />
-      <div className="mx-auto max-w-7xl px-6 py-10">
+      <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-10">
 
         {/* Stepper */}
         <Stepper step={step} onStep={setStep} />
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-          <div className="min-h-[60vh]">
+        <div className="mt-6 grid gap-6 sm:mt-8 sm:gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="min-w-0 lg:min-h-[60vh]">
+
             {step === 0 && <IdentityStep name={name} setName={setName} gender={gender} setGender={setGender} />}
             {step === 1 && <BloodlineStep raceId={raceId} setRaceId={setRaceId} gender={gender} />}
             {step === 2 && <AspectStep aspectId={aspectId} setAspectId={setAspectId} />}
