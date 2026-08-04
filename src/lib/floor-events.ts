@@ -454,6 +454,41 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
 
   veiled: [
     {
+      id: "ve-fae-exile",
+      title: "The Exile's Welcome",
+      npc: "A fae noble in moth-eaten finery, half-gone to shadow",
+      prompt:
+        "A figure steps from behind a pillar and bows with the old, precise grace of the Verdant Court. 'Sister. Brother. Kin. The Sovereign has no love for our kind, but I remember the green. Let me remind you, before the Halls make you forget.'",
+      requiresRace: ["fae"],
+      requires: (s) => !s.flags.ve_fae_exile_met,
+      choices: [
+        {
+          label: "Accept the memory",
+          hint: "+8 Focus · +1 shard · Verdant Memory blessing",
+          outcome:
+            "The noble presses a moth-wing to your brow. For a moment you smell leaves, not dust. 'Do not let the Halls rewrite you,' they whisper.",
+          effect: { focus: 8, shards: 1 },
+          saga: {
+            setFlags: ["ve_fae_exile_met"],
+            rep: { veiled: 1 },
+            addBlessing: {
+              id: "verdant-memory",
+              name: "Verdant Memory",
+              desc: "The Verdant Court still whispers to you in the Halls.",
+            },
+          },
+        },
+        {
+          label: "Refuse — the Halls are your home now",
+          hint: "+2 AC · +1 ATK · no blessing",
+          outcome:
+            "The noble's smile is sad and proud. 'Then become something the Sovereign cannot own,' they say, and dissolve into shadow.",
+          effect: { ac: 2, atkBonus: 1 },
+          saga: { setFlags: ["ve_fae_exile_met"], rep: { veiled: -1 } },
+        },
+      ],
+    },
+    {
       id: "ve-mirror-twin",
       title: "Your Reflection, Late",
       prompt:
