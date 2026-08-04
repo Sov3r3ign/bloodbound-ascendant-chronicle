@@ -18,9 +18,7 @@ const TONE_CLASS: Record<string, { accent: string; border: string; glow: string 
 };
 
 export function NpcDialogueModal({ templateId, raceId, onChoice, onClose }: Props) {
-  const rawTpl = useMemo(() => getNpcTemplate(templateId, raceId), [templateId, raceId]);
-  const [tpl, setTpl] = useState(rawTpl);
-  useEffect(() => setTpl(rawTpl), [rawTpl]);
+  const tpl = useMemo(() => getNpcTemplate(templateId, raceId), [templateId, raceId]);
   const [resolved, setResolved] = useState<FloorChoice | null>(null);
 
   useEffect(() => {
