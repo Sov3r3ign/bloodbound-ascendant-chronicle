@@ -458,6 +458,12 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       title: "Your Reflection, Late",
       prompt:
         "Your reflection arrives in the mirror a full breath after you do. It tilts its head and offers — politely — to trade.",
+      racePrompt: {
+        fae:
+          "Your reflection arrives before you do, this time. It curtsies — or bows — with court-perfect grace. 'Cousin,' it says. 'The Verdant Court taught you better than to trade with glass.'",
+        elf:
+          "The mirror does not hold your reflection at first. When it does, the image is too still, too patient. 'Long-lived,' it murmurs. 'You have memories worth more than most.'",
+      },
       requires: (s) => !s.flags.ve_mirror_met,
       choices: [
         {
@@ -466,6 +472,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "Something small leaves you. You will not notice what until much later.",
           effect: { focus: -6, ac: 2, potions: 1 },
           saga: { setFlags: ["ve_mirror_met", "ve_traded_memory"] },
+          raceVariant: {
+            fae: {
+              hint: "−4 Focus · +3 AC · 2 potions · the court's own bargain",
+              outcome: "Your reflection smiles with all your teeth. 'A fair trade, cousin. The court would be proud.'",
+              effect: { focus: -4, ac: 3, potions: 2 },
+            },
+            elf: {
+              hint: "−8 Focus · +3 AC · 2 potions · a century's small sorrow",
+              outcome: "You trade a memory of a summer you cannot place. The mirror pays well for things you had too many of.",
+              effect: { focus: -8, ac: 3, potions: 2 },
+            },
+          },
         },
         {
           label: "Look away",
@@ -473,6 +491,13 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "You refuse the mirror's eye. The corridor exhales. You feel clearer, somehow.",
           effect: { focus: 4 },
           saga: { setFlags: ["ve_mirror_met"], rep: { veiled: 1 } },
+          raceVariant: {
+            fae: {
+              hint: "+6 Focus · the court approves deeply",
+              outcome: "Your reflection fades, disappointed. The Verdant Court has taught you its oldest lesson: never give glass your name.",
+              effect: { focus: 6 },
+            },
+          },
         },
       ],
     },
