@@ -207,6 +207,12 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       id: "cat-weeping-saint",
       title: "The Weeping Saint",
       prompt: "A marble saint weeps black water onto a basin. The water glints like a promise — or a contract.",
+      racePrompt: {
+        fae:
+          "The saint turns her face toward you before you speak. Her tears slow, as if the Verdant Court still has some courtesy left to teach the dead.",
+        umbralborn:
+          "The black water parts around your shadow. The saint does not weep harder or softer — but she weeps for you, specifically.",
+      },
       requires: (s) => !s.flags.cat_saint_met,
       choices: [
         {
@@ -215,6 +221,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "It tastes of iron and old apologies. You feel steadied.",
           effect: { hp: 8, shield: 1 },
           saga: { setFlags: ["cat_saint_met", "cat_drank_tears"], rep: { catacombs: 1 } },
+          raceVariant: {
+            fae: {
+              hint: "+10 HP · +2 Focus · +1 shield · the court's courtesy",
+              outcome: "The water tastes of moonlit gardens half-remembered. Something in you brightens, briefly, like a door left ajar.",
+              effect: { hp: 10, focus: 2, shield: 1 },
+            },
+            umbralborn: {
+              hint: "+8 HP · +4 Focus · +1 shield · the dark drinks first",
+              outcome: "Your shadow sips before your lips touch the basin. The saint's tears warm you in places light cannot reach.",
+              effect: { hp: 8, focus: 4, shield: 1 },
+            },
+          },
         },
         {
           label: "Pry a tear-bead loose",
@@ -222,6 +240,13 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "The saint's stone hand grips your wrist for an instant. You leave with the bead and a thin cut.",
           effect: { shards: 1, hp: -3 },
           saga: { setFlags: ["cat_saint_met", "cat_pried"], rep: { catacombs: -2 } },
+          raceVariant: {
+            fae: {
+              hint: "+2 shards · −2 HP · the saint weeps for your exile",
+              outcome: "The bead comes free too easily. The saint's hand does not stop you — she only weeps faster, as if mourning another lost courtier.",
+              effect: { shards: 2, hp: -2 },
+            },
+          },
         },
       ],
     },
