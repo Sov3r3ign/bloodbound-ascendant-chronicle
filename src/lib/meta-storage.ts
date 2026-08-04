@@ -84,22 +84,11 @@ export function isAspectUnlocked(id: string): boolean {
 export function nextUnlock(m: MetaState):
   | { kind: "race" | "aspect"; id: string; name: string; cost: number }
   | null {
-  const lockedRace = RACES.find((r) => !m.unlockedRaces.includes(r.id));
   const lockedAspect = ASPECTS.find((a) => !m.unlockedAspects.includes(a.id));
-  const raceCost = lockedRace
-    ? RACE_UNLOCK_COSTS[Math.min(RACE_UNLOCK_COSTS.length - 1, m.unlockedRaces.length - DEFAULT_RACES.length)]
-    : Infinity;
-  const aspectCost = lockedAspect
-    ? ASPECT_UNLOCK_COSTS[Math.min(ASPECT_UNLOCK_COSTS.length - 1, m.unlockedAspects.length - DEFAULT_ASPECTS.length)]
-    : Infinity;
-  if (!lockedRace && !lockedAspect) return null;
-  if (raceCost <= aspectCost && lockedRace) {
-    return { kind: "race", id: lockedRace.id, name: lockedRace.name, cost: raceCost };
-  }
-  if (lockedAspect) {
-    return { kind: "aspect", id: lockedAspect.id, name: lockedAspect.name, cost: aspectCost };
-  }
-  return null;
+  if (!lockedAspect) return null;
+  const aspectCost =
+    ASPECT_UNLOCK_COSTS[Math.min(ASPECT_UNLOCK_COSTS.length - 1, m.unlockedAspects.length - DEFAULT_ASPECTS.length)];
+  return { kind: "aspect", id: lockedAspect.id, name: lockedAspect.name, cost: aspectCost };
 }
 
 export function purchaseUnlock(): { meta: MetaState; unlocked: { kind: string; name: string } | null } {
