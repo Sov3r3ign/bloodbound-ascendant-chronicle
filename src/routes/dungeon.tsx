@@ -574,6 +574,7 @@ function DungeonPage() {
           floor={floorIntro.floor}
           isSanctuary={floorIntro.isSanctuary}
           saga={saga}
+          raceId={character.raceId}
           onChoice={(c: FloorChoice) => {
             setGame((g) => {
               if (!g) return g;
