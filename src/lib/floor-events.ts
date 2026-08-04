@@ -72,6 +72,35 @@ export function pickFloorIntro(biomeId: BiomeId, floor: number, saga: Saga): str
   return base;
 }
 
+// ----- Race-aware resolution helpers -----
+export function resolveChoiceForRace(
+  choice: FloorChoice,
+  raceId?: string,
+): FloorChoice {
+  if (!raceId || !choice.raceVariant?.[raceId]) return choice;
+  const variant = choice.raceVariant[raceId]!;
+  return {
+    ...choice,
+    label: variant.label ?? choice.label,
+    hint: variant.hint ?? choice.hint,
+    outcome: variant.outcome ?? choice.outcome,
+    effect: { ...choice.effect, ...variant.effect },
+    saga: variant.saga ?? choice.saga,
+  };
+}
+
+export function resolveEventForRace(
+  event: FloorEvent,
+  raceId?: string,
+): FloorEvent {
+  const prompt = (raceId && event.racePrompt?.[raceId]) ?? event.prompt;
+  const choices = event.choices.map((c) => resolveChoiceForRace(c, raceId)) as [
+    FloorChoice,
+    FloorChoice,
+  ];
+  return { ...event, prompt, choices };
+}
+
 // ----- Events: branching, with follow-ups gated by saga.flags -----
 const EVENTS: Record<BiomeId, FloorEvent[]> = {
   catacombs: [
