@@ -287,6 +287,41 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
 
   foundry: [
     {
+      id: "fo-dragon-ember",
+      title: "The First Ember",
+      npc: "A wyrm-scale half-buried in cooling slag",
+      prompt:
+        "A scale the size of your hand lies in the ash. It still glows. The voice that rises from it is not the forge's — it is older, draconic, amused. 'Little spark,' it says. 'You walk through my cousins' bones. Will you wake one, or let them sleep?'",
+      requiresRace: ["dragonborn"],
+      requires: (s) => !s.flags.fo_dragon_ember_met,
+      choices: [
+        {
+          label: "Wake the ember",
+          hint: "−5 HP · +3 buff DMG · 5 turns · Dragon-Wake blessing",
+          outcome:
+            "The scale flares and crumbles. Heat nests in your chest. For a while, your blood remembers wings.",
+          effect: { hp: -5, buffDmg: 3, buffTurns: 5 },
+          saga: {
+            setFlags: ["fo_dragon_ember_met"],
+            rep: { foundry: 2 },
+            addBlessing: {
+              id: "dragon-wake",
+              name: "Dragon-Wake",
+              desc: "Ancient fire stirs in your strikes.",
+            },
+          },
+        },
+        {
+          label: "Let the ember sleep",
+          hint: "+2 Focus · +1 AC · the forge owes you peace",
+          outcome:
+            "You step back. The glow dims, but does not die. The forges around you quiet for a long moment, as if in thanks.",
+          effect: { focus: 2, ac: 1 },
+          saga: { setFlags: ["fo_dragon_ember_met"], rep: { foundry: 1 } },
+        },
+      ],
+    },
+    {
       id: "fo-soot-prophet",
       title: "The Soot Prophet",
       npc: "A child shape, all ash, with cinder-bright eyes",
