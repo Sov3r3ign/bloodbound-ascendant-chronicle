@@ -374,6 +374,12 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       title: "The Bellows-Pact",
       prompt:
         "A forge ignites at your approach. A voice in the flame: 'Feed me, and I will arm you. Refuse, and I will remember.'",
+      racePrompt: {
+        dwarf:
+          "A forge ignites at your approach, but the voice in the flame is gentler. 'Stone-blood,' it murmurs. 'You know the old bargain. Feed me, and I will arm you as I armed your fathers.'",
+        dragonborn:
+          "The flame roars up in greeting. 'Wyrm-blood!' the voice crackles. 'You are fire wearing flesh. Take my gift, or teach me your hunger.'",
+      },
       requires: (s) => !s.flags.fo_bellows_met,
       choices: [
         {
@@ -382,6 +388,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "Your weapon edge glows briefly orange. The forge sighs, satisfied.",
           effect: { gold: -20, buffDmg: 2, buffTurns: 6 },
           saga: { setFlags: ["fo_bellows_met", "fo_bellows_fed"], rep: { foundry: 1 } },
+          raceVariant: {
+            dwarf: {
+              hint: "−15 gold · +3 buff DMG · 6 turns · the forge remembers kin",
+              outcome: "The flame drinks your coin and leaves your weapon singing with heat. 'Well fed,' it says. 'As your grandsires fed me.'",
+              effect: { gold: -15, buffDmg: 3, buffTurns: 6 },
+            },
+            dragonborn: {
+              hint: "−10 gold · +2 buff DMG · 8 turns · the fire shares its temper",
+              outcome: "The forge takes less from you than from others. It recognizes a kindred hunger. Your blade keeps its heat longer.",
+              effect: { gold: -10, buffDmg: 2, buffTurns: 8 },
+            },
+          },
         },
         {
           label: "Refuse",
@@ -389,6 +407,15 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "The fire dims. You find a focus elixir in the ashpit on your way past — unrelated, surely.",
           effect: { elixirs: 1 },
           saga: { setFlags: ["fo_bellows_met", "fo_refused_bellows"], rep: { foundry: -1 } },
+          raceVariant: {
+            dwarf: {
+              label: "Refuse with a smith's apology",
+              hint: "+1 elixir · the forge is disappointed, not angry",
+              outcome: "You bow to the flame the old way. It dims, but does not curse. 'A dwarf who does not forge,' it sighs. 'Still, you know respect.'",
+              effect: { elixirs: 1 },
+              saga: { setFlags: ["fo_bellows_met"], rep: { foundry: 0 } },
+            },
+          },
         },
       ],
     },
