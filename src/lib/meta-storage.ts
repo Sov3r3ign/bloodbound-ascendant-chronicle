@@ -25,11 +25,11 @@ export type MetaState = {
 };
 
 const KEY = "bloodbound.meta";
-const DEFAULT_RACES = ["human", "fae", "umbralborn", "elf"];
+// All bloodlines are available from the start.
+const ALL_RACES = RACES.map((r) => r.id);
 const DEFAULT_ASPECTS = ["ruin", "veils", "echoes", "oaths"];
 
-// shards required to unlock the next race/aspect
-const RACE_UNLOCK_COSTS = [4, 7, 10, 14, 18];
+// shards required to unlock the next aspect
 const ASPECT_UNLOCK_COSTS = [5, 9, 13, 18, 24, 30];
 
 export function defaultMeta(): MetaState {
@@ -39,7 +39,7 @@ export function defaultMeta(): MetaState {
     totalKills: 0,
     deepestFloor: 0,
     highestTier: 1,
-    unlockedRaces: [...DEFAULT_RACES],
+    unlockedRaces: [...ALL_RACES],
     unlockedAspects: [...DEFAULT_ASPECTS],
     lastRun: null,
   };
@@ -51,7 +51,8 @@ export function loadMeta(): MetaState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultMeta();
     const parsed = JSON.parse(raw) as MetaState;
-    return { ...defaultMeta(), ...parsed };
+    // races are never gated — always grant them all
+    return { ...defaultMeta(), ...parsed, unlockedRaces: [...ALL_RACES] };
   } catch {
     return defaultMeta();
   }
