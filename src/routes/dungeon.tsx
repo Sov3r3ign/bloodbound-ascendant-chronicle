@@ -108,7 +108,7 @@ function DungeonPage() {
     const c = loadCharacter();
     setCharacter(c);
     const p = makePlayer(c.vitals);
-    setGame(generateDungeon(GRID_W, GRID_H, 1, p));
+    setGame(generateDungeon(GRID_W, GRID_H, 1, p, c.raceId));
     setMeta(loadMeta());
   }, []);
 
