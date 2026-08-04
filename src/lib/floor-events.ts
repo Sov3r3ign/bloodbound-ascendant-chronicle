@@ -696,6 +696,12 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       id: "mi-heart-pulse",
       title: "The Heart's Pulse",
       prompt: "The mire-floor swells beneath you in a single, deliberate beat. Something vast notices.",
+      racePrompt: {
+        beastkin:
+          "The mire-floor swells beneath you in a single, deliberate beat. Something vast notices — and then, strangely, settles. It smells kinship in your blood.",
+        umbralborn:
+          "The mire-floor swells beneath you, and the darkness in your shadow swells with it. For one heartbeat, you and the dungeon share the same pulse.",
+      },
       requires: (s) => !s.flags.mi_heart_met,
       choices: [
         {
@@ -704,6 +710,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "Heat floods up your arm. Your wounds close — and something old learns your shape.",
           effect: { hp: 12, focus: -4 },
           saga: { setFlags: ["mi_heart_met", "mi_pressed_palm"], rep: { mire: 1 } },
+          raceVariant: {
+            beastkin: {
+              hint: "+14 HP · −2 Focus · the dungeon accepts you as kin",
+              outcome: "The pulse does not examine you — it welcomes you. Your blood answers the mire's blood.",
+              effect: { hp: 14, focus: -2 },
+            },
+            umbralborn: {
+              hint: "+12 HP · +2 Focus · the dark and the mire trade secrets",
+              outcome: "Your shadow drinks the pulse before your skin touches it. You feel the dungeon's attention pass on, satisfied.",
+              effect: { hp: 12, focus: 2 },
+            },
+          },
         },
         {
           label: "Step quickly off",
