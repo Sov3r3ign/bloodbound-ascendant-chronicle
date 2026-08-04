@@ -571,10 +571,15 @@ export function pickFloorEvent(
   floor: number,
   isSanctuary: boolean,
   saga: Saga,
+  raceId?: string,
 ): FloorEvent | null {
   if (isSanctuary) return SANCTUARY_EVENT;
   if (floor === 1) return null;
-  const pool = EVENTS[biomeId].filter((e) => !e.requires || e.requires(saga));
+  const pool = EVENTS[biomeId].filter((e) => {
+    if (e.requires && !e.requires(saga)) return false;
+    if (e.requiresRace && (!raceId || !e.requiresRace.includes(raceId))) return false;
+    return true;
+  });
   if (pool.length === 0) return null;
 
   // Follow-up events (those with weight) ALWAYS fire when eligible.
