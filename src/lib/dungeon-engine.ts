@@ -428,7 +428,7 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     // NPC spawn — one wanderer per floor from floor 2 onward, 65% chance.
     if (floor >= 2 && rand() < 0.65 && rooms.length > 2) {
       const biomeNow = biomeForFloor(floor);
-      const tpl = pickNpcTemplate(biomeNow.id, floor);
+      const tpl = pickNpcTemplate(biomeNow.id, floor, raceId);
       if (tpl) {
         for (let tries2 = 0; tries2 < 40; tries2++) {
           const rIdx = 1 + Math.floor(rand() * (rooms.length - 2));
