@@ -292,6 +292,12 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       npc: "A child shape, all ash, with cinder-bright eyes",
       prompt:
         "A small figure crouches by a cold forge, drawing futures in the ash. 'Pick a coal,' she says. 'One burns. One sings.'",
+      racePrompt: {
+        dragonborn:
+          "The ash-child looks up and grins with too many teeth. 'Wyrm-blood. You do not need my coal — you carry one in your throat. But I will offer anyway.'",
+        dwarf:
+          "She straightens when she sees you. 'Stone-blood. Cousin of coal and ore. The forge already knows your name.'",
+      },
       requires: (s) => !s.flags.fo_prophet_met,
       choices: [
         {
@@ -300,6 +306,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "It hums against your palm and sinks beneath your skin. Your strikes feel surer.",
           effect: { atkBonus: 1 },
           saga: { setFlags: ["fo_prophet_met", "fo_singing_coal"], rep: { foundry: 1 } },
+          raceVariant: {
+            dragonborn: {
+              hint: "+2 ATK bonus · the old fire answers yours",
+              outcome: "The coal does not sink into skin — it rises to meet the ember in your blood. For a moment your shadow has wings.",
+              effect: { atkBonus: 2 },
+            },
+            dwarf: {
+              hint: "+1 ATK bonus · +1 AC · the old smiths approve",
+              outcome: "The coal rings like a struck anvil when you close your fist. Your armor's seams tighten of their own accord.",
+              effect: { atkBonus: 1, ac: 1 },
+            },
+          },
         },
         {
           label: "Take the burning coal",
@@ -307,6 +325,13 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "It scars your hand on the way into your pocket. Two bloodbound shards stay behind in the ash.",
           effect: { hp: -4, shards: 2 },
           saga: { setFlags: ["fo_prophet_met", "fo_burning_coal"] },
+          raceVariant: {
+            dragonborn: {
+              hint: "−1 HP · +3 shards · the fire knows kin",
+              outcome: "The coal burns, but barely. It is polite to its own kind. Three shards glitter in the ash where two should be.",
+              effect: { hp: -1, shards: 3 },
+            },
+          },
         },
       ],
     },
