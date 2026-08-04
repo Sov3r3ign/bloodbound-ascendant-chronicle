@@ -214,7 +214,7 @@ function DungeonPage() {
       const t = setTimeout(() => {
         const nextFloor = game.floor + 1;
         const p = { ...game.player, x: 0, y: 0 };
-        setGame(generateDungeon(GRID_W, GRID_H, nextFloor, p));
+        setGame(generateDungeon(GRID_W, GRID_H, nextFloor, p, character.raceId));
       }, 700);
       return () => clearTimeout(t);
     }
