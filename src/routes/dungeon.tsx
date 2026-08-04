@@ -593,6 +593,7 @@ function DungeonPage() {
         return (
           <NpcDialogueModal
             templateId={npc.templateId}
+            raceId={character.raceId}
             onChoice={(c: FloorChoice) => {
               setGame((g) => {
                 if (!g) return g;
