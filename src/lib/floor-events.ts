@@ -21,6 +21,8 @@ export type FloorChoice = {
   outcome: string;
   effect: FloorChoiceEffect;
   saga?: SagaDelta;
+  /** Optional racial variant overrides keyed by race id. */
+  raceVariant?: Partial<Record<string, Partial<FloorChoice>>>;
 };
 
 export type FloorEvent = {
@@ -28,8 +30,12 @@ export type FloorEvent = {
   title: string;
   npc?: string;
   prompt: string;
+  /** Optional prompt overrides keyed by race id. */
+  racePrompt?: Partial<Record<string, string>>;
   choices: [FloorChoice, FloorChoice];
   requires?: (s: Saga) => boolean;
+  /** If set, only these races can see this event. */
+  requiresRace?: string[];
   /** Higher = more likely to be chosen when multiple match. */
   weight?: number;
 };
