@@ -270,16 +270,19 @@ export const NPC_TEMPLATES: NpcTemplate[] = [
 ];
 
 /** Pick an NPC template for a floor, filtered by biome + min floor. */
-export function pickNpcTemplate(biomeId: BiomeId, floor: number): NpcTemplate | null {
+export function pickNpcTemplate(biomeId: BiomeId, floor: number, raceId?: string): NpcTemplate | null {
   const pool = NPC_TEMPLATES.filter((t) => {
     if (t.minFloor && floor < t.minFloor) return false;
     if (t.biomes && !t.biomes.includes(biomeId)) return false;
     return true;
   });
   if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
+  const tpl = pool[Math.floor(Math.random() * pool.length)];
+  return resolveNpcTemplateForRace(tpl, raceId);
 }
 
-export function getNpcTemplate(id: string): NpcTemplate | undefined {
-  return NPC_TEMPLATES.find((t) => t.id === id);
+export function getNpcTemplate(id: string, raceId?: string): NpcTemplate | undefined {
+  const tpl = NPC_TEMPLATES.find((t) => t.id === id);
+  if (!tpl) return undefined;
+  return resolveNpcTemplateForRace(tpl, raceId);
 }
