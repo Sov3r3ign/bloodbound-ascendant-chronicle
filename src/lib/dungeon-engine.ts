@@ -310,7 +310,7 @@ export function makePlayer(vitals: { vigor: number; focus: number; resolve: numb
 // ---- Dungeon generation ----
 type Room = { x: number; y: number; w: number; h: number; visited?: boolean };
 
-export function generateDungeon(width: number, height: number, floor: number, player: Player): GameState {
+export function generateDungeon(width: number, height: number, floor: number, player: Player, raceId?: string): GameState {
   const sanctuary = floor > 1 && floor % 4 === 0;
   const tiles: Tile[][] = Array.from({ length: height }, () =>
     Array.from({ length: width }, () => ({ kind: "wall" as TileKind, seen: false, visible: false }))
