@@ -108,7 +108,7 @@ function DungeonPage() {
     const c = loadCharacter();
     setCharacter(c);
     const p = makePlayer(c.vitals);
-    setGame(generateDungeon(GRID_W, GRID_H, 1, p));
+    setGame(generateDungeon(GRID_W, GRID_H, 1, p, c.raceId));
     setMeta(loadMeta());
   }, []);
 
@@ -214,7 +214,7 @@ function DungeonPage() {
       const t = setTimeout(() => {
         const nextFloor = game.floor + 1;
         const p = { ...game.player, x: 0, y: 0 };
-        setGame(generateDungeon(GRID_W, GRID_H, nextFloor, p));
+        setGame(generateDungeon(GRID_W, GRID_H, nextFloor, p, character.raceId));
       }, 700);
       return () => clearTimeout(t);
     }
@@ -266,7 +266,7 @@ function DungeonPage() {
     const p = makePlayer(character.vitals);
     setSaga(emptySaga());
     lastIntroFloorRef.current = -1;
-    setGame(generateDungeon(GRID_W, GRID_H, 1, p));
+    setGame(generateDungeon(GRID_W, GRID_H, 1, p, character.raceId));
   };
 
   return (
@@ -574,6 +574,7 @@ function DungeonPage() {
           floor={floorIntro.floor}
           isSanctuary={floorIntro.isSanctuary}
           saga={saga}
+          raceId={character.raceId}
           onChoice={(c: FloorChoice) => {
             setGame((g) => {
               if (!g) return g;
@@ -592,6 +593,7 @@ function DungeonPage() {
         return (
           <NpcDialogueModal
             templateId={npc.templateId}
+            raceId={character.raceId}
             onChoice={(c: FloorChoice) => {
               setGame((g) => {
                 if (!g) return g;

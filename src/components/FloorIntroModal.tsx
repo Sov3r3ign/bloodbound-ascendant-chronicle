@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { biomeForFloor } from "@/lib/dungeon-engine";
 import { biomeImage } from "@/lib/biome-images";
 import {
   pickFloorIntro,
   pickFloorEvent,
+  resolveEventForRace,
   type FloorChoice,
   type FloorEvent,
 } from "@/lib/floor-events";
@@ -14,6 +15,7 @@ type Props = {
   floor: number;
   isSanctuary: boolean;
   saga: Saga;
+  raceId?: string;
   onChoice: (choice: FloorChoice) => void;
   onClose: () => void;
 };
@@ -27,10 +29,11 @@ function romanize(n: number): string {
   return out;
 }
 
-export function FloorIntroModal({ floor, isSanctuary, saga, onChoice, onClose }: Props) {
+export function FloorIntroModal({ floor, isSanctuary, saga, raceId, onChoice, onClose }: Props) {
   const biome = biomeForFloor(floor);
   const [intro] = useState(() => pickFloorIntro(biome.id, floor, saga));
-  const [event] = useState<FloorEvent | null>(() => pickFloorEvent(biome.id, floor, isSanctuary, saga));
+  const rawEvent = useMemo<FloorEvent | null>(() => pickFloorEvent(biome.id, floor, isSanctuary, saga, raceId), [biome.id, floor, isSanctuary, saga, raceId]);
+  const event = useMemo(() => rawEvent ? resolveEventForRace(rawEvent, raceId) : null, [rawEvent, raceId]);
   const [resolvedChoice, setResolvedChoice] = useState<FloorChoice | null>(null);
 
   useEffect(() => {

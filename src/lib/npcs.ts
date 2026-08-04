@@ -3,7 +3,7 @@
 // `applyFloorChoice` handles the state mutation identically.
 
 import type { BiomeId } from "./dungeon-engine";
-import type { FloorChoice } from "./floor-events";
+import { resolveChoiceForRace, type FloorChoice } from "./floor-events";
 
 export type NpcTone = "blood" | "ember" | "arcane" | "bone";
 
@@ -16,6 +16,8 @@ export type NpcTemplate = {
   npc: string;
   /** Opening prompt spoken by the NPC. */
   prompt: string;
+  /** Optional prompt overrides keyed by race id. */
+  racePrompt?: Partial<Record<string, string>>;
   /** 2–4 choices. Reuses FloorChoice for effect + saga mutations. */
   choices: FloorChoice[];
   /** If set, restrict to these biomes. Otherwise available anywhere. */
@@ -23,6 +25,16 @@ export type NpcTemplate = {
   /** Minimum floor before this NPC can appear. */
   minFloor?: number;
 };
+
+export function resolveNpcTemplateForRace(
+  tpl: NpcTemplate,
+  raceId?: string,
+): NpcTemplate {
+  if (!raceId) return tpl;
+  const prompt = tpl.racePrompt?.[raceId] ?? tpl.prompt;
+  const choices = tpl.choices.map((c) => resolveChoiceForRace(c, raceId));
+  return { ...tpl, prompt, choices };
+}
 
 export const NPC_TEMPLATES: NpcTemplate[] = [
   // ── Catacombs ───────────────────────────────────────────────
@@ -258,16 +270,19 @@ export const NPC_TEMPLATES: NpcTemplate[] = [
 ];
 
 /** Pick an NPC template for a floor, filtered by biome + min floor. */
-export function pickNpcTemplate(biomeId: BiomeId, floor: number): NpcTemplate | null {
+export function pickNpcTemplate(biomeId: BiomeId, floor: number, raceId?: string): NpcTemplate | null {
   const pool = NPC_TEMPLATES.filter((t) => {
     if (t.minFloor && floor < t.minFloor) return false;
     if (t.biomes && !t.biomes.includes(biomeId)) return false;
     return true;
   });
   if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
+  const tpl = pool[Math.floor(Math.random() * pool.length)];
+  return resolveNpcTemplateForRace(tpl, raceId);
 }
 
-export function getNpcTemplate(id: string): NpcTemplate | undefined {
-  return NPC_TEMPLATES.find((t) => t.id === id);
+export function getNpcTemplate(id: string, raceId?: string): NpcTemplate | undefined {
+  const tpl = NPC_TEMPLATES.find((t) => t.id === id);
+  if (!tpl) return undefined;
+  return resolveNpcTemplateForRace(tpl, raceId);
 }
