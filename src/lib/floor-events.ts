@@ -623,6 +623,12 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       npc: "A woman-shape grown through with black roots",
       prompt:
         "She does not move when you approach. 'Give me blood,' she says, 'and I will give you back what the dungeon took.'",
+      racePrompt: {
+        beastkin:
+          "The roots still as you approach. The Root-Mother's head turns, though her body does not. 'Feral heart,' she whispers. 'You smell of honest hunger. Give me blood, and I will give you back the wild the dungeon stole.'",
+        crocman:
+          "The mire itself seems to bow. 'Child of the river-mud,' she says. 'You know the old bargain: blood for blood, scale for root. Give, and I will make you a swamp-king.'",
+      },
       requires: (s) => !s.flags.mi_mother_met,
       choices: [
         {
@@ -631,6 +637,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "She drinks. The roots flush red, then settle. She presses gifts into your hand.",
           effect: { hp: -8, shards: 2, potions: 1 },
           saga: { setFlags: ["mi_mother_met", "mi_gave_blood"], rep: { mire: 2 } },
+          raceVariant: {
+            beastkin: {
+              hint: "−6 HP · +3 shards · +2 potions · the wild accepts your offering",
+              outcome: "She drinks less from you than from others. 'A small offering from a feral heart is worth more,' she says. The gifts are richer.",
+              effect: { hp: -6, shards: 3, potions: 2 },
+            },
+            crocman: {
+              hint: "−6 HP · +2 shards · +1 potion · +1 elixir · the mire welcomes its own",
+              outcome: "The roots do not pierce you — they coil, almost affectionately. 'Swallow this,' she says, pressing a muddy elixir into your claws.",
+              effect: { hp: -6, shards: 2, potions: 1, elixirs: 1 },
+            },
+          },
         },
         {
           label: "Refuse and pass",
