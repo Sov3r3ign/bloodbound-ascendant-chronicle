@@ -25,11 +25,11 @@ export type MetaState = {
 };
 
 const KEY = "bloodbound.meta";
-const DEFAULT_RACES = ["human", "fae", "umbralborn", "elf"];
+// All bloodlines are available from the start.
+const ALL_RACES = RACES.map((r) => r.id);
 const DEFAULT_ASPECTS = ["ruin", "veils", "echoes", "oaths"];
 
-// shards required to unlock the next race/aspect
-const RACE_UNLOCK_COSTS = [4, 7, 10, 14, 18];
+// shards required to unlock the next aspect
 const ASPECT_UNLOCK_COSTS = [5, 9, 13, 18, 24, 30];
 
 export function defaultMeta(): MetaState {
@@ -39,7 +39,7 @@ export function defaultMeta(): MetaState {
     totalKills: 0,
     deepestFloor: 0,
     highestTier: 1,
-    unlockedRaces: [...DEFAULT_RACES],
+    unlockedRaces: [...ALL_RACES],
     unlockedAspects: [...DEFAULT_ASPECTS],
     lastRun: null,
   };
@@ -51,7 +51,8 @@ export function loadMeta(): MetaState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultMeta();
     const parsed = JSON.parse(raw) as MetaState;
-    return { ...defaultMeta(), ...parsed };
+    // races are never gated — always grant them all
+    return { ...defaultMeta(), ...parsed, unlockedRaces: [...ALL_RACES] };
   } catch {
     return defaultMeta();
   }
@@ -83,22 +84,11 @@ export function isAspectUnlocked(id: string): boolean {
 export function nextUnlock(m: MetaState):
   | { kind: "race" | "aspect"; id: string; name: string; cost: number }
   | null {
-  const lockedRace = RACES.find((r) => !m.unlockedRaces.includes(r.id));
   const lockedAspect = ASPECTS.find((a) => !m.unlockedAspects.includes(a.id));
-  const raceCost = lockedRace
-    ? RACE_UNLOCK_COSTS[Math.min(RACE_UNLOCK_COSTS.length - 1, m.unlockedRaces.length - DEFAULT_RACES.length)]
-    : Infinity;
-  const aspectCost = lockedAspect
-    ? ASPECT_UNLOCK_COSTS[Math.min(ASPECT_UNLOCK_COSTS.length - 1, m.unlockedAspects.length - DEFAULT_ASPECTS.length)]
-    : Infinity;
-  if (!lockedRace && !lockedAspect) return null;
-  if (raceCost <= aspectCost && lockedRace) {
-    return { kind: "race", id: lockedRace.id, name: lockedRace.name, cost: raceCost };
-  }
-  if (lockedAspect) {
-    return { kind: "aspect", id: lockedAspect.id, name: lockedAspect.name, cost: aspectCost };
-  }
-  return null;
+  if (!lockedAspect) return null;
+  const aspectCost =
+    ASPECT_UNLOCK_COSTS[Math.min(ASPECT_UNLOCK_COSTS.length - 1, m.unlockedAspects.length - DEFAULT_ASPECTS.length)];
+  return { kind: "aspect", id: lockedAspect.id, name: lockedAspect.name, cost: aspectCost };
 }
 
 export function purchaseUnlock(): { meta: MetaState; unlocked: { kind: string; name: string } | null } {
