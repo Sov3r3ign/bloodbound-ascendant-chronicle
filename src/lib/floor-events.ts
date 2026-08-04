@@ -111,6 +111,14 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       npc: "A bone-thin figure in faded vestments",
       prompt:
         "An old keeper rises from amid the relics. 'Each bone here has a name,' he rasps. 'Speak yours — leave a coin — and the dead may answer.'",
+      racePrompt: {
+        umbralborn:
+          "The keeper does not rise. He simply tilts his head into shadow and exhales. 'One of the dark-born. The dead here will speak to you differently — if you let them.'",
+        human:
+          "The keeper studies you with something like curiosity. 'Young blood. The dead have not learned your name yet — but they are listening. Pay the toll, or dare their silence.'",
+        giant:
+          "The keeper has to crane his neck. 'Mountain's child in a house of bones. The dead do not fear size, but they respect the weight of old stone.'",
+      },
       requires: (s) => !s.flags.cat_keeper_met,
       choices: [
         {
@@ -127,6 +135,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
               desc: "The Catacombs' dead remember you kindly.",
             },
           },
+          raceVariant: {
+            umbralborn: {
+              hint: "−10 gold · +8 HP · +6 Focus · the shadows pay your toll",
+              outcome: "The shadows under your cloak spill a few obols forward. The keeper does not touch them. 'The dark has already counted you.'",
+              effect: { gold: -10, hp: 8, focus: 6 },
+            },
+            giant: {
+              hint: "−20 gold · +8 HP · +6 Focus · +1 shield · the keeper is impressed",
+              outcome: "You drop a fistful of coin that rings like a hammer. The keeper bows lower than usual. 'Old stone pays old debts.'",
+              effect: { gold: -20, hp: 8, focus: 6, shield: 1 },
+            },
+          },
         },
         {
           label: "Spit on the floor and walk on",
@@ -136,6 +156,14 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           saga: {
             setFlags: ["cat_keeper_met", "cat_spat"],
             rep: { catacombs: -1 },
+          },
+          raceVariant: {
+            giant: {
+              label: "Crush a femur underfoot and walk on",
+              hint: "+3 buff DMG (4 turns) · the dead will remember brutality",
+              outcome: "The bone snaps like dry twig. The keeper does not flinch. 'The mountain has spoken,' he whispers. 'The mountain will be answered.'",
+              effect: { buffDmg: 3, buffTurns: 4 },
+            },
           },
         },
       ],
