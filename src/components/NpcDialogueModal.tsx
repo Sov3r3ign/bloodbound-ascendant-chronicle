@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { FloorChoice } from "@/lib/floor-events";
 import { getNpcTemplate } from "@/lib/npcs";
 
 type Props = {
   templateId: string;
+  raceId?: string;
   onChoice: (choice: FloorChoice) => void;
   onClose: () => void;
 };
@@ -16,8 +17,10 @@ const TONE_CLASS: Record<string, { accent: string; border: string; glow: string 
   bone: { accent: "text-bone", border: "border-bone/60", glow: "text-glow" },
 };
 
-export function NpcDialogueModal({ templateId, onChoice, onClose }: Props) {
-  const tpl = getNpcTemplate(templateId);
+export function NpcDialogueModal({ templateId, raceId, onChoice, onClose }: Props) {
+  const rawTpl = useMemo(() => getNpcTemplate(templateId, raceId), [templateId, raceId]);
+  const [tpl, setTpl] = useState(rawTpl);
+  useEffect(() => setTpl(rawTpl), [rawTpl]);
   const [resolved, setResolved] = useState<FloorChoice | null>(null);
 
   useEffect(() => {
