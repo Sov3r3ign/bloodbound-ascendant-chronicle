@@ -538,6 +538,12 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
       npc: "A herald in colourless silks, holding a folded writ",
       prompt:
         "'The Sovereign sees you,' the herald says. 'Bow, and be remembered kindly. Refuse, and be remembered.'",
+      racePrompt: {
+        fae:
+          "The herald's composure cracks for half a heartbeat. 'A child of the Verdant Court,' it breathes. 'The Sovereign will be most interested. Bow, and be welcomed as kin. Refuse, and be claimed as a curiosity.'",
+        elf:
+          "The herald studies your ears, your stillness. 'Long-lived,' it says, with something like envy. 'The Sovereign has a fondness for patience. Bow, and be seated near the throne.'",
+      },
       requires: (s) => !s.flags.ve_herald_met,
       choices: [
         {
@@ -546,6 +552,18 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "Soft applause from nowhere. The court has noted you — for now, fondly.",
           effect: { hp: 10, shield: 1 },
           saga: { setFlags: ["ve_herald_met", "ve_bowed"], rep: { veiled: 2 } },
+          raceVariant: {
+            fae: {
+              hint: "+12 HP · +2 shield · +1 Focus · welcomed as kin",
+              outcome: "The herald bows lower than it bowed to you. 'The Sovereign greets a cousin of the old courts.'",
+              effect: { hp: 12, shield: 2, focus: 1 },
+            },
+            elf: {
+              hint: "+10 HP · +2 shield · +1 shard · patience rewarded",
+              outcome: "'The Sovereign admires those who outlast,' the herald says, pressing a shard into your palm like a seat-token.",
+              effect: { hp: 10, shield: 2, shards: 1 },
+            },
+          },
         },
         {
           label: "Stand",
@@ -553,6 +571,13 @@ const EVENTS: Record<BiomeId, FloorEvent[]> = {
           outcome: "The herald's smile thins to a wire. 'As you wish.' Anger sharpens you.",
           effect: { atkBonus: 1, buffDmg: 3, buffTurns: 3 },
           saga: { setFlags: ["ve_herald_met", "ve_refused_bow"], rep: { veiled: -2 } },
+          raceVariant: {
+            fae: {
+              hint: "+1 ATK · +4 buff DMG (3 turns) · the court is offended by kinship denied",
+              outcome: "'To refuse once is pride,' the herald hisses. 'To refuse kinship is insult.' The insult burns in your blood like a battle-song.",
+              effect: { atkBonus: 1, buffDmg: 4, buffTurns: 3 },
+            },
+          },
         },
       ],
     },
