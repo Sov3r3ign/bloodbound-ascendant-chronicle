@@ -60,7 +60,7 @@ function DungeonPage() {
   const recordedRef = useRef(false);
   const seenBeastsRef = useRef<Set<string>>(new Set());
   const [encounterQueue, setEncounterQueue] = useState<{ name: string; level: number }[]>([]);
-  const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean } | null>(null);
+  const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean; isBossArena: boolean } | null>(null);
   const [saga, setSaga] = useState<Saga>(() => emptySaga());
   const lastIntroFloorRef = useRef<number>(-1);
   const prevRef = useRef<{
@@ -78,7 +78,7 @@ function DungeonPage() {
     if (!game) return;
     if (game.floor === lastIntroFloorRef.current) return;
     lastIntroFloorRef.current = game.floor;
-    setFloorIntro({ floor: game.floor, isSanctuary: game.isSanctuary });
+    setFloorIntro({ floor: game.floor, isSanctuary: game.isSanctuary, isBossArena: game.isBossArena });
   }, [game?.floor]);
 
   // Trigger reveal portrait only when the beast is in melee proximity (engagement)
@@ -277,7 +277,7 @@ function DungeonPage() {
         <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
           <div className="min-w-0">
             <div className={`font-display text-[9px] tracking-[0.3em] sm:text-[10px] sm:tracking-[0.4em] ${biomeForFloor(game.floor).accentClass}`}>
-              {game.isSanctuary ? "SANCTUARY · " : ""}FLOOR {romanize(game.floor)} · {biomeForFloor(game.floor).name.toUpperCase()}
+              {game.isSanctuary ? "SANCTUARY · " : game.isBossArena ? "BOSS ARENA · " : ""}FLOOR {romanize(game.floor)} · {biomeForFloor(game.floor).name.toUpperCase()}
             </div>
             <h1 className="truncate font-display text-xl text-glow sm:text-2xl md:text-3xl">{character.name}</h1>
             <div className="mt-0.5 font-serif text-xs italic text-muted-foreground sm:text-sm">
@@ -391,7 +391,7 @@ function DungeonPage() {
           <RuneFrame className="order-1 p-2 min-w-0 sm:p-3 lg:order-none">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
-                {game.isSanctuary ? "THE SANCTUARY" : "THE DUNGEON"}
+                {game.isSanctuary ? "THE SANCTUARY" : game.isBossArena ? `ARENA — ${biomeForFloor(game.floor).bossName.toUpperCase()}` : "THE DUNGEON"}
               </div>
               <div className="hidden gap-3 text-[10px] font-display tracking-widest text-muted-foreground md:flex">
                 <span><span className="text-arcane">@</span> YOU</span>
@@ -573,6 +573,7 @@ function DungeonPage() {
         <FloorIntroModal
           floor={floorIntro.floor}
           isSanctuary={floorIntro.isSanctuary}
+          isBossArena={floorIntro.isBossArena}
           saga={saga}
           raceId={character.raceId}
           onChoice={(c: FloorChoice) => {

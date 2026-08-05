@@ -5,6 +5,15 @@ import { RuneFrame } from "@/components/RuneFrame";
 import { InfoTip } from "@/components/InfoTip";
 import { RacePortrait, GenderIcon } from "@/components/RacePortrait";
 import { saveCharacter, type Gender } from "@/lib/character-storage";
+import {
+  AURAS,
+  BUILDS,
+  COMPLEXIONS,
+  MARKINGS,
+  appearanceSummary,
+  defaultAppearance,
+  type Appearance,
+} from "@/lib/appearance";
 import { loadMeta } from "@/lib/meta-storage";
 import {
   ASPECTS,
@@ -30,7 +39,7 @@ export const Route = createFileRoute("/create")({
 
 type Vitals = { vigor: number; focus: number; resolve: number };
 
-const STEPS = ["Identity", "Bloodline", "Aspect", "Resonance", "Vitals", "Oath"] as const;
+const STEPS = ["Identity", "Bloodline", "Visage", "Aspect", "Resonance", "Vitals", "Oath"] as const;
 
 function Forge() {
   const [step, setStep] = useState(0);
@@ -40,6 +49,7 @@ function Forge() {
   const [aspectId, setAspectId] = useState<string | null>(null);
   const [resonanceIds, setResonanceIds] = useState<string[]>([]);
   const [vitals, setVitals] = useState<Vitals>({ vigor: 6, focus: 6, resolve: 6 });
+  const [appearance, setAppearance] = useState<Appearance>(() => defaultAppearance());
 
   const race = RACES.find((r) => r.id === raceId) ?? null;
   const aspect = ASPECTS.find((a) => a.id === aspectId) ?? null;
@@ -50,9 +60,10 @@ function Forge() {
     switch (step) {
       case 0: return name.trim().length >= 2;
       case 1: return !!raceId;
-      case 2: return !!aspectId;
-      case 3: return resonanceIds.length >= 1 && resonanceIds.length <= 3;
-      case 4: return remaining === 0;
+      case 2: return true;
+      case 3: return !!aspectId;
+      case 4: return resonanceIds.length >= 1 && resonanceIds.length <= 3;
+      case 5: return remaining === 0;
       default: return true;
     }
   }, [step, name, raceId, aspectId, resonanceIds, remaining]);
@@ -73,15 +84,23 @@ function Forge() {
 
             {step === 0 && <IdentityStep name={name} setName={setName} gender={gender} setGender={setGender} />}
             {step === 1 && <BloodlineStep raceId={raceId} setRaceId={setRaceId} gender={gender} />}
-            {step === 2 && <AspectStep aspectId={aspectId} setAspectId={setAspectId} />}
-            {step === 3 && (
+            {step === 2 && (
+              <VisageStep
+                raceId={raceId}
+                gender={gender}
+                appearance={appearance}
+                setAppearance={setAppearance}
+              />
+            )}
+            {step === 3 && <AspectStep aspectId={aspectId} setAspectId={setAspectId} />}
+            {step === 4 && (
               <ResonanceStep
                 resonanceIds={resonanceIds}
                 setResonanceIds={setResonanceIds}
               />
             )}
-            {step === 4 && <VitalsStep vitals={vitals} setVitals={setVitals} remaining={remaining} />}
-            {step === 5 && (
+            {step === 5 && <VitalsStep vitals={vitals} setVitals={setVitals} remaining={remaining} />}
+            {step === 6 && (
               <OathStep
                 name={name}
                 race={race?.name ?? "—"}
@@ -112,7 +131,7 @@ function Forge() {
                   to="/dungeon"
                   onClick={() => {
                     if (raceId && aspectId) {
-                      saveCharacter({ name: name.trim(), gender, raceId, aspectId, resonanceIds, vitals });
+                      saveCharacter({ name: name.trim(), gender, raceId, aspectId, resonanceIds, appearance, vitals });
                     }
                   }}
                   className="rounded-sm border border-ember/50 bg-gradient-to-r from-ember/80 to-blood/80 px-5 py-2 font-display text-[11px] tracking-[0.3em] text-background shadow-arcane sm:px-8 sm:text-xs"
@@ -127,6 +146,7 @@ function Forge() {
           <CharacterSheet
             name={name}
             gender={gender}
+            appearance={appearance}
             raceId={raceId}
             race={race?.name ?? null}
             raceSigil={race?.sigil}
@@ -555,6 +575,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 function CharacterSheet({
   name,
   gender,
+  appearance,
   raceId,
   race,
   raceSigil,
@@ -567,6 +588,7 @@ function CharacterSheet({
 }: {
   name: string;
   gender: Gender;
+  appearance: Appearance;
   raceId: string | null;
   race: string | null;
   raceSigil?: string;
@@ -583,9 +605,10 @@ function CharacterSheet({
         <div className="flex flex-col items-center text-center">
           <div className="font-display text-[10px] tracking-[0.4em] text-arcane">CHARACTER SHEET</div>
           <div className="mt-4">
-            <RacePortrait raceId={raceId} gender={gender} size={88} active={!!raceId} />
+            <RacePortrait raceId={raceId} gender={gender} size={88} active={!!raceId} appearance={appearance} />
           </div>
           <div className="mt-3 font-display text-xl tracking-wider text-bone min-h-[1.75rem]">{name || "—"}</div>
+          <div className="font-serif text-[11px] italic text-muted-foreground">{appearanceSummary(appearance)}</div>
           <div className="inline-flex items-center justify-center gap-1.5 font-serif text-xs italic text-muted-foreground">
             <GenderIcon gender={gender} size={11} />
             <span className="capitalize">{gender}</span>
@@ -675,6 +698,155 @@ function Bar({ label, value, max, tone }: { label: string; value: number; max: n
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-border/60">
         <div className={`h-full bg-${tone}`} style={{ width: `${(value / max) * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
+
+function VisageStep({
+  raceId,
+  gender,
+  appearance,
+  setAppearance,
+}: {
+  raceId: string | null;
+  gender: Gender;
+  appearance: Appearance;
+  setAppearance: (a: Appearance) => void;
+}) {
+  const set = (patch: Partial<Appearance>) => setAppearance({ ...appearance, ...patch });
+  return (
+    <RuneFrame className="p-5 sm:p-10 animate-float-up">
+      <Eyebrow>III · The Visage</Eyebrow>
+      <h2 className="mt-3 font-display text-2xl sm:text-3xl text-glow">Shape how your blood wears you.</h2>
+      <p className="mt-3 font-serif italic text-muted-foreground">
+        No two of a bloodline look alike. Cosmetic only — the dungeon judges deeds, not faces.
+      </p>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[220px_1fr]">
+        <div className="flex flex-col items-center gap-3">
+          <RacePortrait raceId={raceId} gender={gender} size={160} active appearance={appearance} />
+          <div className="text-center font-serif text-[11px] italic text-muted-foreground">
+            {appearanceSummary(appearance)}
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-6">
+          <div>
+            <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
+              COMPLEXION
+              <InfoTip title="Complexion" size={11}>
+                The tone of skin, hide, scale or bark your ascendant carries.
+              </InfoTip>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {COMPLEXIONS.map((c) => {
+                const active = c.id === appearance.complexion;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => set({ complexion: c.id })}
+                    title={c.hint}
+                    className={`flex items-center gap-2 rounded-sm border px-3 py-2 transition-all ${
+                      active ? "border-arcane bg-arcane/10 shadow-arcane" : "border-border bg-card/60 hover:border-arcane/50"
+                    }`}
+                  >
+                    <span
+                      className="h-4 w-4 rounded-full border border-border/70"
+                      style={{ background: c.swatch }}
+                    />
+                    <span className="font-display text-[11px] tracking-widest text-bone">
+                      {c.label.toUpperCase()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <ChoiceRow
+            label="BUILD"
+            tip="Your silhouette — how you fill a doorway."
+            options={BUILDS}
+            value={appearance.build}
+            onPick={(id) => set({ build: id })}
+          />
+          <ChoiceRow
+            label="MARKINGS"
+            tip="Scars, sigils and paint worn on the flesh."
+            options={MARKINGS}
+            value={appearance.marking}
+            onPick={(id) => set({ marking: id })}
+          />
+          <ChoiceRow
+            label="AURA"
+            tip="The light that clings to you in the dark."
+            options={AURAS}
+            value={appearance.aura}
+            onPick={(id) => set({ aura: id })}
+          />
+
+          <div>
+            <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
+              IN YOUR OWN WORDS
+              <InfoTip title="Description" size={11}>
+                Free-form. Written into your character sheet and the chronicle.
+              </InfoTip>
+            </div>
+            <textarea
+              value={appearance.note}
+              onChange={(e) => set({ note: e.target.value.slice(0, 240) })}
+              rows={3}
+              maxLength={240}
+              placeholder="e.g. A shaved head mapped with grave-ink; one eye clouded milk-white."
+              className="mt-3 w-full rounded-sm border border-border bg-input/40 px-3 py-2 font-serif text-sm italic text-bone outline-none focus:border-arcane focus:shadow-rune"
+            />
+            <div className="mt-1 text-right font-mono text-[10px] text-muted-foreground">
+              {appearance.note.length}/240
+            </div>
+          </div>
+        </div>
+      </div>
+    </RuneFrame>
+  );
+}
+
+function ChoiceRow({
+  label,
+  tip,
+  options,
+  value,
+  onPick,
+}: {
+  label: string;
+  tip: string;
+  options: { id: string; label: string; hint: string }[];
+  value: string;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
+        {label}
+        <InfoTip title={label} size={11}>{tip}</InfoTip>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {options.map((o) => {
+          const active = o.id === value;
+          return (
+            <button
+              key={o.id}
+              onClick={() => onPick(o.id)}
+              className={`rounded-sm border p-2.5 text-left transition-all ${
+                active ? "border-arcane bg-arcane/10 shadow-arcane" : "border-border bg-card/60 hover:border-arcane/50"
+              }`}
+            >
+              <div className="font-display text-[11px] tracking-widest text-bone">{o.label.toUpperCase()}</div>
+              <div className="font-serif text-[10px] italic text-muted-foreground">{o.hint}</div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
