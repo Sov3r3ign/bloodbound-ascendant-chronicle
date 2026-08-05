@@ -4,24 +4,29 @@ const KEY = "bloodbound.prologue.seen";
 
 const CHAPTERS: { title: string; body: string }[] = [
   {
-    title: "I · The World That Was",
+    title: "I · The Weakest Rank",
     body:
-      "Long before the first dungeon drew breath, there was AETHRYNDOR — a continent of nine cradles, where bloodlines were not metaphor but inheritance written in marrow. Dragons made pacts with mountains. The fae bartered with mirrors. Giants slept under cities that mistook them for hills.",
+      "When the black seam split the sky over AETHRYNDOR, gates began to open — and the world sorted its people by how much the gates feared them. Sovereign, Ascendant, Bound, Dross. You were measured at fourteen and stamped DROSS: the lowest rank, the porter grade, the ones sent in first because the guilds count them cheaply.",
   },
   {
-    title: "II · The Sundering",
+    title: "II · The Floor You Did Not Leave",
     body:
-      "The Sovereigns of Aethryndor grew vain. They tried to bind a god of endings into a coin, and the coin bit back. The sky cracked along a single black seam, and from that seam fell the First Dungeon — not built, but born. It ate three kingdoms before anyone learned its name: VRAEKHAL, the Hunger Beneath.",
+      "Your party took a low-tier gate for a low-tier fee. It was not a low-tier gate. You remember the sound the ceiling made when it stopped being a ceiling, and the guild-captain's face as he sealed the door behind him with you on the wrong side. You bled out on cold stone with nineteen strangers, alone, unranked, unmourned.",
   },
   {
-    title: "III · The Bloodbound",
+    title: "III · The Voice Beneath",
     body:
-      "Vraekhal did not kill all who entered. Some it changed. Their blood began to sing — to answer the dungeon, to remember it. These are the ASCENDANTS: mortals whose lineage the dark recognizes, and challenges, and rewards. Every floor they survive, the dungeon learns them better. Every gift they accept, it watches more closely.",
+      "You did not die. Something under the floor — older than the gates, older than the guilds — opened one eye and found you interesting. 'You have no talent,' it said, almost kindly. 'So I will lend you mine. Every thing that falls before you is a debt owed to you. Collect it.' Your blood answered. It has been answering ever since.",
   },
   {
-    title: "IV · Your Pact",
+    title: "IV · The Bloodbound",
     body:
-      "You are the latest to feel the call. The Sovereigns are long dust; only the Ascendants stand between Aethryndor and the second seam. Forge your bloodline. Bind your aspect. Accept the resonance that finds you. The dungeon is awake — and it has been waiting for someone exactly like you.",
+      "This is the ASCENDANT'S curse and gift: the dead you leave behind do not stay behind. Their strength settles into your marrow — a fraction of every kill, a shard of every Sovereign. You do not level as others level. You inherit. And with each inheritance the thing beneath the floor leans a little closer, watching what you become.",
+  },
+  {
+    title: "V · Solo Descent",
+    body:
+      "No party will take you. No guild will insure you. You go down alone, floor by floor, because alone is the only way the debt pays out undivided. Somewhere below the last floor sits the throne of VRAEKHAL, the Hunger Beneath — and the only mortal it has ever bothered to name is you. Forge your bloodline. Bind your aspect. Begin the climb downward.",
   },
 ];
 
