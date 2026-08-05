@@ -137,6 +137,8 @@ export type GameState = {
   lastDice: { value: number; outcome: string; label: string } | null;
   flashes: { x: number; y: number; kind: "hit" | "miss" | "heal" | "event"; text: string; id: number }[];
   isSanctuary: boolean;
+  /** True on dedicated boss-arena floors (no wandering monsters, one sealed chamber). */
+  isBossArena: boolean;
   shop: ShopOffer[] | null;
   counters: RunCounters;
   cause: Cause;
@@ -312,6 +314,7 @@ type Room = { x: number; y: number; w: number; h: number; visited?: boolean };
 
 export function generateDungeon(width: number, height: number, floor: number, player: Player, raceId?: string): GameState {
   const sanctuary = floor > 1 && floor % 4 === 0;
+  if (!sanctuary && floor % 3 === 0) return generateBossArena(width, height, floor, player);
   const tiles: Tile[][] = Array.from({ length: height }, () =>
     Array.from({ length: width }, () => ({ kind: "wall" as TileKind, seen: false, visible: false }))
   );
@@ -373,7 +376,6 @@ export function generateDungeon(width: number, height: number, floor: number, pl
       }
     }
   } else {
-    const isBossFloor = floor % 3 === 0;
     for (let i = 1; i < rooms.length; i++) {
       const room = rooms[i];
       const count = ri(1, 2) + (floor >= 2 ? 1 : 0);
@@ -421,10 +423,6 @@ export function generateDungeon(width: number, height: number, floor: number, pl
       placed++;
     }
 
-    if (isBossFloor) {
-      monsters.push(makeMonster(nextId++, end.x, end.y - 1 >= 0 ? end.y - 1 : end.y, floor, true));
-    }
-
     // NPC spawn — one wanderer per floor from floor 2 onward, 65% chance.
     if (floor >= 2 && rand() < 0.65 && rooms.length > 2) {
       const biomeNow = biomeForFloor(floor);
@@ -464,7 +462,105 @@ export function generateDungeon(width: number, height: number, floor: number, pl
     lastDice: null,
     flashes: [],
     isSanctuary: sanctuary,
+    isBossArena: false,
     shop: sanctuary ? makeShop(floor) : null,
+    counters: state_counters_zero(),
+    cause: "unknown",
+    shakeUntil: 0,
+    visitedRooms: new Set([0]),
+    biomeId: biome.id,
+  };
+  recomputeFOV(state);
+  return state;
+}
+
+
+/**
+ * Dedicated boss floor: a small antechamber, a sealed approach corridor,
+ * and one great pillared arena where the Sovereign waits.
+ */
+function generateBossArena(width: number, height: number, floor: number, player: Player): GameState {
+  const tiles: Tile[][] = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => ({ kind: "wall" as TileKind, seen: false, visible: false }))
+  );
+
+  // Antechamber on the left
+  const ante: Room = { x: 2, y: Math.floor(height / 2) - 2, w: 6, h: 5 };
+  carveRoom(tiles, ante);
+
+  // Great arena on the right
+  const aw = Math.min(width - ante.x - ante.w - 8, 20);
+  const ah = Math.min(height - 4, 14);
+  const arena: Room = {
+    x: ante.x + ante.w + 5,
+    y: Math.max(1, Math.floor((height - ah) / 2)),
+    w: Math.max(11, aw),
+    h: Math.max(9, ah),
+  };
+  carveRoom(tiles, arena);
+
+  // Approach corridor
+  const a = centerOf(ante);
+  const b = centerOf(arena);
+  carveH(tiles, a.x, arena.x, a.y);
+  carveV(tiles, a.y, b.y, arena.x);
+
+  // Symmetric pillars inside the arena
+  for (let py = arena.y + 2; py < arena.y + arena.h - 2; py += 3) {
+    for (let px = arena.x + 2; px < arena.x + arena.w - 2; px += 4) {
+      if (Math.abs(px - b.x) <= 1 && Math.abs(py - b.y) <= 1) continue;
+      tiles[py][px].kind = "wall";
+    }
+  }
+
+  player.x = a.x;
+  player.y = a.y;
+
+  // Stairs behind the Sovereign, at the far wall
+  const ex = arena.x + arena.w - 2;
+  const ey = b.y;
+  tiles[ey][ex].kind = "floor";
+  tiles[ey][ex].kind = "stairs";
+
+  const monsters: Monster[] = [];
+  const items: Item[] = [];
+  let nextId = 1;
+
+  // The Sovereign, dead centre
+  monsters.push(makeMonster(nextId++, b.x, b.y, floor, true));
+
+  // Two honour-guards flanking, from floor 6 on
+  if (floor >= 6) {
+    const guards: [number, number][] = [
+      [b.x - 3, b.y - 2],
+      [b.x + 3, b.y + 2],
+    ];
+    for (const [gx, gy] of guards) {
+      if (tiles[gy]?.[gx]?.kind === "floor") monsters.push(makeMonster(nextId++, gx, gy, floor, false));
+    }
+  }
+
+  // Supplies in the antechamber before the door
+  items.push(makeItem(nextId++, ante.x + 1, ante.y + 1, floor));
+  items.push(makeItem(nextId++, ante.x + ante.w - 2, ante.y + ante.h - 2, floor));
+  tiles[ante.y + ante.h - 1][ante.x + 1].kind = "shrine";
+
+  const biome = biomeForFloor(floor);
+  const state: GameState = {
+    width, height, tiles, monsters, items, npcs: [], pendingNpcId: null, player,
+    floor, turn: 0,
+    log: [
+      { t: "system", m: `Floor ${floor} — the Arena of ${biome.bossName}.` },
+      { t: "narrative", m: "The corridor ends in a threshold too wide for a corridor. Beyond it, a chamber built for one purpose: something is meant to die here." },
+      { t: "narrative", m: `${biome.bossName} does not move. It is waiting to see whether you come closer.` },
+    ],
+    attention: 4 + Math.min(8, floor),
+    status: "playing",
+    lastDice: null,
+    flashes: [],
+    isSanctuary: false,
+    isBossArena: true,
+    shop: null,
     counters: state_counters_zero(),
     cause: "unknown",
     shakeUntil: 0,
