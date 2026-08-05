@@ -14,6 +14,7 @@ import type { Saga } from "@/lib/saga";
 type Props = {
   floor: number;
   isSanctuary: boolean;
+  isBossArena?: boolean;
   saga: Saga;
   raceId?: string;
   onChoice: (choice: FloorChoice) => void;
@@ -29,7 +30,7 @@ function romanize(n: number): string {
   return out;
 }
 
-export function FloorIntroModal({ floor, isSanctuary, saga, raceId, onChoice, onClose }: Props) {
+export function FloorIntroModal({ floor, isSanctuary, isBossArena = false, saga, raceId, onChoice, onClose }: Props) {
   const biome = biomeForFloor(floor);
   const [intro] = useState(() => pickFloorIntro(biome.id, floor, saga));
   const rawEvent = useMemo<FloorEvent | null>(() => pickFloorEvent(biome.id, floor, isSanctuary, saga, raceId), [biome.id, floor, isSanctuary, saga, raceId]);
@@ -86,7 +87,7 @@ export function FloorIntroModal({ floor, isSanctuary, saga, raceId, onChoice, on
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 pb-3 text-center">
             <div className={`font-display text-[10px] tracking-[0.5em] ${accent} animate-flicker`}>
-              {isSanctuary ? "◆ SANCTUARY ◆" : "◆ YOU DESCEND ◆"}
+              {isSanctuary ? "◆ SANCTUARY ◆" : isBossArena ? "◆ THE ARENA ◆" : "◆ YOU DESCEND ◆"}
             </div>
             <div className="mt-0.5 font-mono text-[10px] tracking-[0.3em] text-muted-foreground">
               FLOOR {romanize(floor)}
@@ -103,7 +104,9 @@ export function FloorIntroModal({ floor, isSanctuary, saga, raceId, onChoice, on
 
         <div className="px-6 py-5">
           <p className="font-serif text-sm italic leading-relaxed text-foreground/90">
-            {intro}
+            {isBossArena
+              ? `The floor opens into a single vast chamber, pillared and swept clean of bones — someone tidies this place between deaths. At its centre, ${biome.bossName} waits, and the only way onward runs through it.`
+              : intro}
           </p>
 
           {event && (
