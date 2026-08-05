@@ -1,4 +1,5 @@
 import { ASPECTS, RACES } from "./game-data";
+import { defaultAppearance, normalizeAppearance, type Appearance } from "./appearance";
 
 export type Gender = "male" | "female";
 
@@ -8,6 +9,7 @@ export type StoredCharacter = {
   raceId: string;
   aspectId: string;
   resonanceIds: string[];
+  appearance?: Appearance;
   vitals: { vigor: number; focus: number; resolve: number };
 };
 
@@ -27,6 +29,7 @@ export function loadCharacter(): StoredCharacter {
     const parsed = JSON.parse(raw) as StoredCharacter;
     if (!parsed?.name || !parsed.raceId || !parsed.aspectId) return defaultCharacter();
     if (!parsed.gender) parsed.gender = "male";
+    parsed.appearance = normalizeAppearance(parsed.appearance);
     return parsed;
   } catch {
     return defaultCharacter();
@@ -40,6 +43,7 @@ export function defaultCharacter(): StoredCharacter {
     raceId: RACES[0].id,
     aspectId: ASPECTS[0].id,
     resonanceIds: ["wounded"],
+    appearance: defaultAppearance(),
     vitals: { vigor: 6, focus: 6, resolve: 6 },
   };
 }
