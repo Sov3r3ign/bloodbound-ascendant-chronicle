@@ -8,6 +8,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { RACE_IMAGES } from "@/lib/race-images";
+import {
+  auraShadow,
+  markingLayer,
+  portraitFilter,
+  type Appearance,
+} from "@/lib/appearance";
 
 
 export type Gender = "male" | "female";
@@ -27,12 +33,14 @@ export function RacePortrait({
   gender,
   size = 96,
   active = false,
+  appearance,
 }: {
   raceId: string | null;
   gender: Gender;
   size?: number;
   tone?: "arcane" | "blood" | "ember" | "bone";
   active?: boolean;
+  appearance?: Appearance | null;
 }) {
   const img = raceId ? RACE_IMAGES[raceId] : undefined;
   const GIcon = GENDER_ICONS[gender];
@@ -41,7 +49,11 @@ export function RacePortrait({
       className={`relative inline-flex items-center justify-center overflow-hidden rounded-full border bg-gradient-to-b from-card to-background/40 ${
         active ? "border-arcane shadow-arcane animate-flicker" : "border-border/70"
       }`}
-      style={{ width: size, height: size }}
+      style={{
+        width: size,
+        height: size,
+        boxShadow: auraShadow(appearance) ?? undefined,
+      }}
     >
       {img ? (
         <img
@@ -49,10 +61,19 @@ export function RacePortrait({
           alt=""
           loading="lazy"
           className="h-full w-full object-cover"
-          style={{ objectPosition: "center 20%" }}
+          style={{
+            objectPosition: "center 20%",
+            filter: portraitFilter(appearance),
+          }}
         />
       ) : (
         <User className="text-arcane" size={Math.round(size * 0.5)} strokeWidth={1.4} />
+      )}
+      {markingLayer(appearance) && (
+        <span
+          className="pointer-events-none absolute inset-0"
+          style={{ background: markingLayer(appearance)! }}
+        />
       )}
       <span
         className={`absolute -bottom-1 -right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border bg-background ${GENDER_TONE[gender]}`}
@@ -80,12 +101,14 @@ export function RacePreview({
   height = 360,
   className = "",
   label,
+  appearance,
 }: {
   raceId: string | null;
   gender: Gender;
   height?: number;
   className?: string;
   label?: string;
+  appearance?: Appearance | null;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0, sx: 1 });
@@ -111,7 +134,7 @@ export function RacePreview({
       onMouseMove={onMove}
       onMouseLeave={onLeave}
       className={`relative w-full overflow-hidden rounded-lg border border-border/70 rune-border shadow-deep ${className}`}
-      style={{ height, perspective: 900 }}
+      style={{ height, perspective: 900, boxShadow: auraShadow(appearance) ?? undefined }}
     >
       {img ? (
         <img
@@ -122,6 +145,7 @@ export function RacePreview({
             transform: `scale(${tilt.sx}) translate3d(${tilt.x * -18}px, ${tilt.y * -14}px, 0) rotateX(${tilt.y * -4}deg) rotateY(${tilt.x * 6}deg)`,
             transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
             objectPosition: "center 18%",
+            filter: portraitFilter(appearance),
           }}
         />
       ) : (
@@ -138,6 +162,13 @@ export function RacePreview({
             "radial-gradient(ellipse at 50% 10%, transparent 40%, oklch(0.08 0.02 285 / 55%) 85%), linear-gradient(180deg, transparent 55%, oklch(0.08 0.02 285 / 85%) 100%)",
         }}
       />
+
+      {markingLayer(appearance) && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: markingLayer(appearance)! }}
+        />
+      )}
 
       {/* gender sigil overlay (toggleable) */}
       {showSigil && (
