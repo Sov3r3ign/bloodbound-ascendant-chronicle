@@ -738,6 +738,27 @@ function VisageStep({
 
         <div className="min-w-0 space-y-6">
           <div>
+            <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-ember">
+              BLOODLINE PRESETS
+              <InfoTip title="Presets" size={11}>
+                Curated looks drawn from your bloodline's own people. Pick one, then change anything you like.
+              </InfoTip>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {presetsForRace(raceId).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setAppearance({ ...appearance, ...p.patch })}
+                  className="rounded-sm border border-ember/40 bg-ember/5 p-2.5 text-left transition-all hover:border-ember hover:bg-ember/10"
+                >
+                  <div className="font-display text-[11px] tracking-widest text-ember">{p.label.toUpperCase()}</div>
+                  <div className="font-serif text-[10px] italic text-muted-foreground">{p.hint}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
               COMPLEXION
               <InfoTip title="Complexion" size={11}>
