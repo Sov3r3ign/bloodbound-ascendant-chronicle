@@ -63,6 +63,7 @@ function DungeonPage() {
   const seenBeastsRef = useRef<Set<string>>(new Set());
   const [encounterQueue, setEncounterQueue] = useState<{ name: string; level: number }[]>([]);
   const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean; isBossArena: boolean } | null>(null);
+  const [bossCinematic, setBossCinematic] = useState<{ name: string; level: number } | null>(null);
   const [saga, setSaga] = useState<Saga>(() => emptySaga());
   const lastIntroFloorRef = useRef<number>(-1);
   const prevRef = useRef<{
