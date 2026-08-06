@@ -194,7 +194,7 @@ function DungeonPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [game, character]);
+  }, [game, character, floorIntro, bossCinematic]);
 
   // Keep the player centered inside the scrollable map viewport on mobile.
   useEffect(() => {
