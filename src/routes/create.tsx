@@ -9,9 +9,13 @@ import {
   AURAS,
   BUILDS,
   COMPLEXIONS,
+  EYES,
+  HAIRSTYLES,
   MARKINGS,
+  SCARS,
   appearanceSummary,
   defaultAppearance,
+  presetsForRace,
   type Appearance,
 } from "@/lib/appearance";
 import { loadMeta } from "@/lib/meta-storage";
