@@ -164,12 +164,13 @@ export function RacePreview({
         }}
       />
 
-      {markingLayer(appearance) && (
+      {overlayLayers(appearance).map((layer, i) => (
         <div
+          key={i}
           className="pointer-events-none absolute inset-0"
-          style={{ background: markingLayer(appearance)! }}
+          style={{ background: layer }}
         />
-      )}
+      ))}
 
       {/* gender sigil overlay (toggleable) */}
       {showSigil && (
