@@ -10,7 +10,7 @@ import {
 import { RACE_IMAGES } from "@/lib/race-images";
 import {
   auraShadow,
-  markingLayer,
+  overlayLayers,
   portraitFilter,
   type Appearance,
 } from "@/lib/appearance";
