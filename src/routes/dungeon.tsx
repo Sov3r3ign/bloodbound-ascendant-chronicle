@@ -600,7 +600,26 @@ function DungeonPage() {
               return res.game;
             });
           }}
-          onClose={() => setFloorIntro(null)}
+          onClose={() => {
+            const wasArena = floorIntro.isBossArena;
+            const floor = floorIntro.floor;
+            setFloorIntro(null);
+            if (wasArena) {
+              const bossName = biomeForFloor(floor).bossName;
+              if (bossIntroFor(bossName)) {
+                seenBeastsRef.current.add(bossName);
+                setBossCinematic({ name: bossName, level: Math.max(floor, 3) + 2 });
+              }
+            }
+          }}
+        />
+      )}
+
+      {bossCinematic && (
+        <BossIntroModal
+          bossName={bossCinematic.name}
+          level={bossCinematic.level}
+          onClose={() => setBossCinematic(null)}
         />
       )}
 
