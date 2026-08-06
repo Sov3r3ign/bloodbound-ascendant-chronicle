@@ -269,16 +269,29 @@ function DungeonPage() {
     setGame(generateDungeon(GRID_W, GRID_H, 1, p, character.raceId));
   };
 
+  const arenaTheme = game.isBossArena ? bossIntroFor(biomeForFloor(game.floor).bossName)?.theme ?? null : null;
+
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen">
+      {arenaTheme && (
+        <div
+          className="pointer-events-none fixed inset-0 z-0 animate-in fade-in"
+          style={{ background: arenaTheme.vignette }}
+        />
+      )}
       <MainMenuButton />
-      <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-6">
+      <div className="relative z-10 mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-6">
         {/* HUD top */}
         <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
           <div className="min-w-0">
-            <div className={`font-display text-[9px] tracking-[0.3em] sm:text-[10px] sm:tracking-[0.4em] ${biomeForFloor(game.floor).accentClass}`}>
+            <div className={`font-display text-[9px] tracking-[0.3em] sm:text-[10px] sm:tracking-[0.4em] ${arenaTheme?.accent ?? biomeForFloor(game.floor).accentClass}`}>
               {game.isSanctuary ? "SANCTUARY · " : game.isBossArena ? "BOSS ARENA · " : ""}FLOOR {romanize(game.floor)} · {biomeForFloor(game.floor).name.toUpperCase()}
             </div>
+            {arenaTheme && (
+              <div className={`mt-1 inline-block rounded-sm border px-2 py-0.5 font-mono text-[9px] tracking-[0.35em] animate-flicker ${arenaTheme.border} ${arenaTheme.wash} ${arenaTheme.accent}`}>
+                ⚑ {arenaTheme.banner}
+              </div>
+            )}
             <h1 className="truncate font-display text-xl text-glow sm:text-2xl md:text-3xl">{character.name}</h1>
             <div className="mt-0.5 font-serif text-xs italic text-muted-foreground sm:text-sm">
               {race?.name} · {aspect?.name} <span className="text-muted-foreground/60">·</span> <span className="italic">{biomeForFloor(game.floor).subtitle}</span>
