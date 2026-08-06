@@ -798,6 +798,28 @@ function VisageStep({
             onPick={(id) => set({ build: id })}
           />
           <ChoiceRow
+            label="HAIR"
+            tip="Crown, mane, horns or shorn scalp."
+            options={HAIRSTYLES}
+            value={appearance.hair}
+            onPick={(id) => set({ hair: id })}
+          />
+          <ChoiceRow
+            label="EYES"
+            tip="Shape and cast — the first thing anything in the dark reads."
+            options={EYES}
+            value={appearance.eyes}
+            onPick={(id) => set({ eyes: id })}
+          />
+          <ChoiceRow
+            label="SCARS"
+            tip="What has already been taken out of you."
+            options={SCARS}
+            value={appearance.scar}
+            onPick={(id) => set({ scar: id })}
+          />
+
+          <ChoiceRow
             label="MARKINGS"
             tip="Scars, sigils and paint worn on the flesh."
             options={MARKINGS}
