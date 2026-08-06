@@ -10,7 +10,7 @@ import {
 import { RACE_IMAGES } from "@/lib/race-images";
 import {
   auraShadow,
-  markingLayer,
+  overlayLayers,
   portraitFilter,
   type Appearance,
 } from "@/lib/appearance";
@@ -69,12 +69,13 @@ export function RacePortrait({
       ) : (
         <User className="text-arcane" size={Math.round(size * 0.5)} strokeWidth={1.4} />
       )}
-      {markingLayer(appearance) && (
+      {overlayLayers(appearance).map((layer, i) => (
         <span
+          key={i}
           className="pointer-events-none absolute inset-0"
-          style={{ background: markingLayer(appearance)! }}
+          style={{ background: layer }}
         />
-      )}
+      ))}
       <span
         className={`absolute -bottom-1 -right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border bg-background ${GENDER_TONE[gender]}`}
         title={gender}
@@ -163,12 +164,13 @@ export function RacePreview({
         }}
       />
 
-      {markingLayer(appearance) && (
+      {overlayLayers(appearance).map((layer, i) => (
         <div
+          key={i}
           className="pointer-events-none absolute inset-0"
-          style={{ background: markingLayer(appearance)! }}
+          style={{ background: layer }}
         />
-      )}
+      ))}
 
       {/* gender sigil overlay (toggleable) */}
       {showSigil && (

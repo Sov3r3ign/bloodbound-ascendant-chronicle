@@ -29,6 +29,8 @@ import { NpcDialogueModal } from "@/components/NpcDialogueModal";
 import { loadMeta, nextUnlock, purchaseUnlock, recordRun, type MetaState } from "@/lib/meta-storage";
 import { beastImage } from "@/lib/beast-images";
 import { FloorIntroModal } from "@/components/FloorIntroModal";
+import { BossIntroModal } from "@/components/BossIntroModal";
+import { bossIntroFor } from "@/lib/boss-intros";
 import { applyFloorChoice, type FloorChoice } from "@/lib/floor-events";
 import { emptySaga, type Saga } from "@/lib/saga";
 import { sfx, isMuted, toggleMuted } from "@/lib/sfx";
@@ -61,6 +63,7 @@ function DungeonPage() {
   const seenBeastsRef = useRef<Set<string>>(new Set());
   const [encounterQueue, setEncounterQueue] = useState<{ name: string; level: number }[]>([]);
   const [floorIntro, setFloorIntro] = useState<{ floor: number; isSanctuary: boolean; isBossArena: boolean } | null>(null);
+  const [bossCinematic, setBossCinematic] = useState<{ name: string; level: number } | null>(null);
   const [saga, setSaga] = useState<Saga>(() => emptySaga());
   const lastIntroFloorRef = useRef<number>(-1);
   const prevRef = useRef<{
@@ -171,7 +174,7 @@ function DungeonPage() {
     if (!game || !character) return;
     const onKey = (e: KeyboardEvent) => {
       if (game.pendingNpcId != null) return; // modal owns keys
-      if (floorIntro) return;
+      if (floorIntro || bossCinematic) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const k = e.key.toLowerCase();
       const map: Record<string, MoveDir> = {
@@ -191,7 +194,7 @@ function DungeonPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [game, character]);
+  }, [game, character, floorIntro, bossCinematic]);
 
   // Keep the player centered inside the scrollable map viewport on mobile.
   useEffect(() => {
@@ -266,19 +269,33 @@ function DungeonPage() {
     const p = makePlayer(character.vitals);
     setSaga(emptySaga());
     lastIntroFloorRef.current = -1;
+    setBossCinematic(null);
     setGame(generateDungeon(GRID_W, GRID_H, 1, p, character.raceId));
   };
 
+  const arenaTheme = game.isBossArena ? bossIntroFor(biomeForFloor(game.floor).bossName)?.theme ?? null : null;
+
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen">
+      {arenaTheme && (
+        <div
+          className="pointer-events-none fixed inset-0 z-0 animate-in fade-in"
+          style={{ background: arenaTheme.vignette }}
+        />
+      )}
       <MainMenuButton />
-      <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-6">
+      <div className="relative z-10 mx-auto max-w-[1600px] px-3 py-4 sm:px-4 sm:py-6">
         {/* HUD top */}
         <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
           <div className="min-w-0">
-            <div className={`font-display text-[9px] tracking-[0.3em] sm:text-[10px] sm:tracking-[0.4em] ${biomeForFloor(game.floor).accentClass}`}>
+            <div className={`font-display text-[9px] tracking-[0.3em] sm:text-[10px] sm:tracking-[0.4em] ${arenaTheme?.accent ?? biomeForFloor(game.floor).accentClass}`}>
               {game.isSanctuary ? "SANCTUARY · " : game.isBossArena ? "BOSS ARENA · " : ""}FLOOR {romanize(game.floor)} · {biomeForFloor(game.floor).name.toUpperCase()}
             </div>
+            {arenaTheme && (
+              <div className={`mt-1 inline-block rounded-sm border px-2 py-0.5 font-mono text-[9px] tracking-[0.35em] animate-flicker ${arenaTheme.border} ${arenaTheme.wash} ${arenaTheme.accent}`}>
+                ⚑ {arenaTheme.banner}
+              </div>
+            )}
             <h1 className="truncate font-display text-xl text-glow sm:text-2xl md:text-3xl">{character.name}</h1>
             <div className="mt-0.5 font-serif text-xs italic text-muted-foreground sm:text-sm">
               {race?.name} · {aspect?.name} <span className="text-muted-foreground/60">·</span> <span className="italic">{biomeForFloor(game.floor).subtitle}</span>
@@ -584,7 +601,26 @@ function DungeonPage() {
               return res.game;
             });
           }}
-          onClose={() => setFloorIntro(null)}
+          onClose={() => {
+            const wasArena = floorIntro.isBossArena;
+            const floor = floorIntro.floor;
+            setFloorIntro(null);
+            if (wasArena) {
+              const bossName = biomeForFloor(floor).bossName;
+              if (bossIntroFor(bossName)) {
+                seenBeastsRef.current.add(bossName);
+                setBossCinematic({ name: bossName, level: Math.max(floor, 3) + 2 });
+              }
+            }
+          }}
+        />
+      )}
+
+      {bossCinematic && (
+        <BossIntroModal
+          bossName={bossCinematic.name}
+          level={bossCinematic.level}
+          onClose={() => setBossCinematic(null)}
         />
       )}
 

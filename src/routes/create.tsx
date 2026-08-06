@@ -9,9 +9,13 @@ import {
   AURAS,
   BUILDS,
   COMPLEXIONS,
+  EYES,
+  HAIRSTYLES,
   MARKINGS,
+  SCARS,
   appearanceSummary,
   defaultAppearance,
+  presetsForRace,
   type Appearance,
 } from "@/lib/appearance";
 import { loadMeta } from "@/lib/meta-storage";
@@ -734,6 +738,27 @@ function VisageStep({
 
         <div className="min-w-0 space-y-6">
           <div>
+            <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-ember">
+              BLOODLINE PRESETS
+              <InfoTip title="Presets" size={11}>
+                Curated looks drawn from your bloodline's own people. Pick one, then change anything you like.
+              </InfoTip>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {presetsForRace(raceId).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setAppearance({ ...appearance, ...p.patch })}
+                  className="rounded-sm border border-ember/40 bg-ember/5 p-2.5 text-left transition-all hover:border-ember hover:bg-ember/10"
+                >
+                  <div className="font-display text-[11px] tracking-widest text-ember">{p.label.toUpperCase()}</div>
+                  <div className="font-serif text-[10px] italic text-muted-foreground">{p.hint}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.4em] text-arcane">
               COMPLEXION
               <InfoTip title="Complexion" size={11}>
@@ -772,6 +797,28 @@ function VisageStep({
             value={appearance.build}
             onPick={(id) => set({ build: id })}
           />
+          <ChoiceRow
+            label="HAIR"
+            tip="Crown, mane, horns or shorn scalp."
+            options={HAIRSTYLES}
+            value={appearance.hair}
+            onPick={(id) => set({ hair: id })}
+          />
+          <ChoiceRow
+            label="EYES"
+            tip="Shape and cast — the first thing anything in the dark reads."
+            options={EYES}
+            value={appearance.eyes}
+            onPick={(id) => set({ eyes: id })}
+          />
+          <ChoiceRow
+            label="SCARS"
+            tip="What has already been taken out of you."
+            options={SCARS}
+            value={appearance.scar}
+            onPick={(id) => set({ scar: id })}
+          />
+
           <ChoiceRow
             label="MARKINGS"
             tip="Scars, sigils and paint worn on the flesh."
