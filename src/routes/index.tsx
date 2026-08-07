@@ -54,7 +54,7 @@ function MainMenu() {
     sfx("ui");
     // fresh run: keep meta shards, clear character so forge starts clean
     try { localStorage.removeItem("bloodbound.character"); } catch {}
-    navigate({ to: "/create" });
+    navigate({ to: "/prologue" });
   }
   function onLoad() {
     if (!hasSave) return;
