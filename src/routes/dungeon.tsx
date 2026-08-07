@@ -20,6 +20,7 @@ import {
   TIER_NAMES,
   TIER_XP,
   usePower,
+  searchArea,
   type GameState,
   type MoveDir,
   type ShopOffer,
@@ -35,7 +36,10 @@ import { applyFloorChoice, type FloorChoice } from "@/lib/floor-events";
 import { emptySaga, type Saga } from "@/lib/saga";
 import { sfx, isMuted, toggleMuted } from "@/lib/sfx";
 import { LevelUpBurst } from "@/components/LevelUpBurst";
-import { Volume2, VolumeX, Swords, Hourglass, FlaskConical, Beaker, Sparkles, Flame } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { IsoDungeon } from "@/components/IsoDungeon";
+import { DescentPathModal, applyDescentPath, type DescentPath } from "@/components/DescentPathModal";
+import { Volume2, VolumeX, Swords, Hourglass, FlaskConical, Beaker, Sparkles, Flame, Search, Boxes, Grid3X3 } from "lucide-react";
 
 export const Route = createFileRoute("/dungeon")({
   head: () => ({
@@ -75,6 +79,9 @@ function DungeonPage() {
   const [combo, setCombo] = useState<{ n: number; lastTurn: number }>({ n: 0, lastTurn: -99 });
   const [muted, setMutedState] = useState<boolean>(() => isMuted());
   const mapScrollRef = useRef<HTMLDivElement | null>(null);
+  const isMobile = useIsMobile();
+  const [isoView, setIsoView] = useState(true);
+  const [pathChoice, setPathChoice] = useState<number | null>(null);
 
   // Show floor intro modal whenever we arrive on a new floor
   useEffect(() => {
@@ -191,6 +198,7 @@ function DungeonPage() {
       else if (k === "2") { e.preventDefault(); setGame((g) => (g ? quaffElixir(g) : g)); }
       else if (k === "q") { e.preventDefault(); setGame((g) => (g && character ? usePower(g, character.aspectId) : g)); }
       else if (k === "r") { e.preventDefault(); setGame((g) => (g ? invokeShrine(g) : g)); }
+      else if (k === "f") { e.preventDefault(); setGame((g) => (g ? searchArea(g) : g)); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -214,12 +222,8 @@ function DungeonPage() {
   useEffect(() => {
     if (!game || !character) return;
     if (game.status === "ascended") {
-      const t = setTimeout(() => {
-        const nextFloor = game.floor + 1;
-        const p = { ...game.player, x: 0, y: 0 };
-        setGame(generateDungeon(GRID_W, GRID_H, nextFloor, p, character.raceId));
-      }, 700);
-      return () => clearTimeout(t);
+      if (pathChoice !== game.floor) setPathChoice(game.floor);
+      return;
     }
     if (game.status === "dead" && !recordedRef.current) {
       recordedRef.current = true;
@@ -236,7 +240,7 @@ function DungeonPage() {
       setMeta(m);
     }
     if (game.status === "playing") recordedRef.current = false;
-  }, [game, character]);
+  }, [game, character, pathChoice]);
 
   if (!character || !game) {
     return (
@@ -410,6 +414,14 @@ function DungeonPage() {
               <div className="font-display text-[10px] tracking-[0.4em] text-arcane">
                 {game.isSanctuary ? "THE SANCTUARY" : game.isBossArena ? `ARENA — ${biomeForFloor(game.floor).bossName.toUpperCase()}` : "THE DUNGEON"}
               </div>
+              <button
+                onClick={() => setIsoView((v) => !v)}
+                className="flex items-center gap-1.5 rounded-sm border border-arcane/40 px-2 py-1 font-display text-[9px] tracking-[0.25em] text-arcane transition-colors hover:bg-arcane/15"
+                title="Toggle isometric / flat view"
+              >
+                {isoView ? <Boxes size={12} /> : <Grid3X3 size={12} />}
+                {isoView ? "ISOMETRIC" : "FLAT"}
+              </button>
               <div className="hidden gap-3 text-[10px] font-display tracking-widest text-muted-foreground md:flex">
                 <span><span className="text-arcane">@</span> YOU</span>
                 <span><span className="text-blood">g/c/s</span> FOES</span>
@@ -421,35 +433,40 @@ function DungeonPage() {
                 <span><span className="text-arcane">&gt;</span> STAIRS</span>
               </div>
             </div>
-            <div ref={mapScrollRef} className="w-full overflow-auto overscroll-contain rounded-sm scroll-smooth">
-              <div
-                className={`relative select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
-                style={{ width: GRID_W * CELL, height: GRID_H * CELL }}
-              >
-                <DungeonGrid game={game} onCellClick={onCellClick} />
-                {/* fog vignette */}
-                <div className="pointer-events-none absolute inset-0 fog-vignette" />
-                {/* player halo */}
-                <div
-                  className="pointer-events-none absolute player-halo"
-                  style={{
-                    width: CELL * 7,
-                    height: CELL * 7,
-                    left: game.player.x * CELL + CELL / 2 - (CELL * 7) / 2,
-                    top: game.player.y * CELL + CELL / 2 - (CELL * 7) / 2,
-                    transition: "left 0.12s linear, top 0.12s linear",
-                  }}
-                />
-
-                {/* overlays */}
+            {isoView ? (
+              <div className={`relative ${shaking ? "animate-shake" : ""}`}>
+                <IsoDungeon game={game} onCellClick={onCellClick} height={isMobile ? 340 : 470} />
                 {game.status === "dead" && meta && (
                   <DeathSummary game={game} meta={meta} character={character} onRestart={() => { recordedRef.current = false; restart(); }} onMeta={() => setMeta(loadMeta())} />
                 )}
-                {game.status === "ascended" && (
-                  <Overlay title="The Stair Opens" subtitle={`Floor ${game.floor + 1} awaits…`} />
-                )}
               </div>
-            </div>
+            ) : (
+              <div ref={mapScrollRef} className="w-full overflow-auto overscroll-contain rounded-sm scroll-smooth">
+                <div
+                  className={`relative select-none overflow-hidden rounded-sm bg-black/60 ring-1 ring-arcane/20 ${shaking ? "animate-shake" : ""}`}
+                  style={{ width: GRID_W * CELL, height: GRID_H * CELL }}
+                >
+                  <DungeonGrid game={game} onCellClick={onCellClick} />
+                  <div className="pointer-events-none absolute inset-0 fog-vignette" />
+                  <div
+                    className="pointer-events-none absolute player-halo"
+                    style={{
+                      width: CELL * 7,
+                      height: CELL * 7,
+                      left: game.player.x * CELL + CELL / 2 - (CELL * 7) / 2,
+                      top: game.player.y * CELL + CELL / 2 - (CELL * 7) / 2,
+                      transition: "left 0.12s linear, top 0.12s linear",
+                    }}
+                  />
+                  {game.status === "dead" && meta && (
+                    <DeathSummary game={game} meta={meta} character={character} onRestart={() => { recordedRef.current = false; restart(); }} onMeta={() => setMeta(loadMeta())} />
+                  )}
+                  {game.status === "ascended" && (
+                    <Overlay title="The Stair Opens" subtitle={`Floor ${game.floor + 1} awaits…`} />
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Touch D-Pad for mobile */}
             <TouchDpad
@@ -458,7 +475,7 @@ function DungeonPage() {
             />
 
             {/* Skill bar */}
-            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-7">
               <SkillSlot hotkey="MOVE" label="STRIKE" tone="blood" icon={<Swords size={22} />} />
               <SkillSlot hotkey="SPC" label="WAIT" tone="bone" icon={<Hourglass size={22} />} onClick={() => setGame((g) => g ? step(g, "wait") : g)} />
               <SkillSlot
@@ -496,6 +513,13 @@ function DungeonPage() {
                 icon={<Flame size={22} />}
                 disabled={!onShrine}
                 onClick={() => setGame((g) => g ? invokeShrine(g) : g)}
+              />
+              <SkillSlot
+                hotkey="F"
+                label="SEARCH"
+                tone="bone"
+                icon={<Search size={22} />}
+                onClick={() => setGame((g) => g ? searchArea(g) : g)}
               />
             </div>
 
@@ -586,6 +610,18 @@ function DungeonPage() {
         />
       )}
 
+      {pathChoice !== null && game.status === "ascended" && character && (
+        <DescentPathModal
+          floor={game.floor + 1}
+          onPick={(path: DescentPath) => {
+            const nextFloor = game.floor + 1;
+            const p = { ...game.player, x: 0, y: 0 };
+            const fresh = generateDungeon(GRID_W, GRID_H, nextFloor, p, character.raceId);
+            setGame(applyDescentPath(fresh, path));
+            setPathChoice(null);
+          }}
+        />
+      )}
       {floorIntro && (
         <FloorIntroModal
           floor={floorIntro.floor}
