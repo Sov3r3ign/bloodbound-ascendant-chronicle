@@ -52,6 +52,8 @@ export type Monster = {
   boss?: boolean;
   phases?: BossPhase[];
   phaseIndex?: number;
+  /** >0 when the foe is telegraphing a heavy blow that lands next turn. */
+  winding?: number;
 };
 
 export type Item = {
@@ -1031,10 +1033,37 @@ function pickUp(s: GameState, it: Item) {
   }
 }
 
+/** How many walkable tiles a foe could retreat to. Fewer = more cornered. */
+export function escapeRoutes(s: GameState, m: Monster): number {
+  let n = 0;
+  for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]) {
+    const nx = m.x + ox;
+    const ny = m.y + oy;
+    if (!walkable(s, nx, ny)) continue;
+    if (nx === s.player.x && ny === s.player.y) continue;
+    if (s.monsters.some((o) => o.id !== m.id && o.hp > 0 && o.x === nx && o.y === ny)) continue;
+    n++;
+  }
+  return n;
+}
+
+/** Situational to-hit / damage advantages against a foe, used by UI + combat. */
+export function tacticalEdge(s: GameState, m: Monster): { flank: boolean; exposed: boolean; hit: number; dmg: number } {
+  const flank = escapeRoutes(s, m) <= 1;
+  const exposed = (m.winding ?? 0) > 0;
+  return {
+    flank,
+    exposed,
+    hit: (flank ? 3 : 0) + (exposed ? 2 : 0),
+    dmg: exposed ? 3 : 0,
+  };
+}
+
 function attackMonster(s: GameState, m: Monster) {
   const die = roll(20);
   const blessed = (s.player.statuses.blessed ?? 0) > 0 ? 2 : 0;
-  const total = die + s.player.atkBonus + blessed;
+  const edge = tacticalEdge(s, m);
+  const total = die + s.player.atkBonus + blessed + edge.hit;
   const crit = die === 20;
   const fumble = die === 1;
   s.lastDice = {
@@ -1042,7 +1071,9 @@ function attackMonster(s: GameState, m: Monster) {
     outcome: crit ? "Critical Success" : fumble ? "Critical Failure" : die >= 15 ? "Great Success" : die >= 8 ? "Success" : "Failure",
     label: `Strike vs ${m.name}`,
   };
-  const mods = s.player.atkBonus + blessed;
+  const mods = s.player.atkBonus + blessed + edge.hit;
+  if (edge.flank) pushLog(s, { t: "combat", m: `${m.name} is cornered — you press the advantage (+3 to hit).` });
+  if (edge.exposed) pushLog(s, { t: "combat", m: `${m.name} is mid-windup — its guard is open (+2 hit, +3 damage).` });
   if (fumble) {
     pushLog(s, { t: "roll", m: `Strike · d20 → 1 (+${mods}) vs AC ${m.ac} — your blade slips.` });
     flash(s, m.x, m.y, "miss", "MISS");
@@ -1051,8 +1082,13 @@ function attackMonster(s: GameState, m: Monster) {
   pushLog(s, { t: "roll", m: `Strike · d20 → ${die} (+${mods}) = ${total} vs ${m.name} AC ${m.ac}.` });
   if (crit || total >= m.ac) {
     const dmgDie = roll(s.player.weaponDie);
-    let dmg = dmgDie + s.player.atkBonus + (s.player.buffDmg > 0 ? s.player.buffDmg : 0);
+    let dmg = dmgDie + s.player.atkBonus + (s.player.buffDmg > 0 ? s.player.buffDmg : 0) + edge.dmg;
     if (crit) dmg *= 2;
+    if (edge.exposed) {
+      m.winding = 0;
+      flash(s, m.x, m.y, "event", "BROKEN");
+      pushLog(s, { t: "combat", m: `The blow lands first — ${m.name}'s attack breaks apart.` });
+    }
     m.hp -= dmg;
     s.counters.damageDealt += dmg;
     pushLog(s, { t: "combat", m: `${crit ? "CRIT! " : ""}Damage · 1d${s.player.weaponDie} → ${dmgDie} (+${s.player.atkBonus}${s.player.buffDmg ? `+${s.player.buffDmg}` : ""})${crit ? " ×2" : ""} = ${dmg} to ${m.name}.` });
@@ -1154,6 +1190,37 @@ function endTurn(s: GameState): GameState {
     const dist = Math.abs(dx) + Math.abs(dy);
     if (!m.awake && dist > FOV_RADIUS) continue;
     if (dist === 1) {
+      // Telegraphed heavy blow: wind up one turn, land the next.
+      if ((m.winding ?? 0) > 0) {
+        m.winding = 0;
+        const die = roll(20);
+        const targetAC = s.player.ac + (s.player.shield > 0 ? 2 : 0);
+        if (die !== 1 && (die === 20 || die + m.bonus + 2 >= targetAC)) {
+          let dmg = roll(m.atk) + roll(m.atk);
+          if (s.player.shield > 0) {
+            const absorbed = Math.min(s.player.shield, dmg);
+            s.player.shield -= absorbed;
+            dmg -= absorbed;
+          }
+          dmg = applyDR(s, dmg);
+          s.player.hp -= dmg;
+          s.counters.damageTaken += dmg;
+          shake(s, 420);
+          flash(s, s.player.x, s.player.y, "hit", `-${dmg}`);
+          pushLog(s, { t: "combat", m: `⚡ ${m.name} unleashes its heavy blow — ${dmg} damage.` });
+          if (s.player.hp <= 0) s.cause = m.boss ? "boss" : "claws";
+        } else {
+          pushLog(s, { t: "combat", m: `${m.name}'s heavy blow crashes past you.` });
+          flash(s, s.player.x, s.player.y, "miss", "DODGED");
+        }
+        continue;
+      }
+      if (rand() < (m.boss ? 0.4 : 0.18)) {
+        m.winding = 1;
+        flash(s, m.x, m.y, "event", "WIND-UP");
+        pushLog(s, { t: "event", m: `⚠ ${m.name} draws back for a heavy blow — strike it or step away.` });
+        continue;
+      }
       const die = roll(20);
       const total = die + m.bonus;
       if (die === 1) { pushLog(s, { t: "combat", m: `${m.name} stumbles.` }); continue; }
@@ -1176,6 +1243,10 @@ function endTurn(s: GameState): GameState {
         pushLog(s, { t: "combat", m: `${m.name} misses (${total} vs ${targetAC}).` });
       }
     } else {
+      if (m.winding) {
+        m.winding = 0;
+        pushLog(s, { t: "combat", m: `${m.name}'s heavy blow hits empty air.` });
+      }
       stepMonsterToward(s, m);
     }
   }
@@ -1262,6 +1333,54 @@ function stepMonsterToward(s: GameState, m: Monster) {
 }
 
 // ---- Inventory / powers ----
+/** Search the surrounding tiles: reveals hidden traps, secret caches and doors. */
+export function searchArea(s: GameState): GameState {
+  if (s.status !== "playing") return s;
+  const next = clone(s);
+  const die = roll(20);
+  const dc = 11;
+  const total = die + Math.floor(next.player.tier / 2);
+  next.lastDice = { value: die, outcome: total >= dc ? "Discovery" : "Nothing", label: "Search the stones" };
+  pushLog(next, { t: "roll", m: `Search · d20 → ${die} (+${Math.floor(next.player.tier / 2)}) vs DC ${dc}.` });
+
+  let found = 0;
+  for (let oy = -2; oy <= 2; oy++) {
+    for (let ox = -2; ox <= 2; ox++) {
+      const x = next.player.x + ox;
+      const y = next.player.y + oy;
+      const t = next.tiles[y]?.[x];
+      if (!t) continue;
+      if (t.kind === "trap" && !t.revealed) { t.revealed = true; t.seen = true; found++; }
+    }
+  }
+  if (found > 0) pushLog(next, { t: "event", m: `You trace ${found} hidden mechanism${found > 1 ? "s" : ""} in the floor.` });
+
+  if (total >= dc) {
+    const r = rand();
+    if (r < 0.4) {
+      const g = ri(8, 20) + next.floor * 2;
+      next.player.gold += g;
+      next.counters.goldEarned += g;
+      flash(next, next.player.x, next.player.y, "event", `+${g}`);
+      pushLog(next, { t: "loot", m: `A loose stone gives — ${g} obols behind it.` });
+    } else if (r < 0.6) {
+      next.player.shards += 1;
+      next.counters.shardsEarned += 1;
+      flash(next, next.player.x, next.player.y, "event", "◇");
+      pushLog(next, { t: "loot", m: "A shard, wedged in mortar, still warm. Taken." });
+    } else if (r < 0.8) {
+      next.player.potions += 1;
+      pushLog(next, { t: "loot", m: "A sealed phial in an alcove. Taken." });
+    } else {
+      pushLog(next, { t: "event", m: "Old scratchings on the wall — a name, a date, a warning. You read it and feel steadier." });
+      next.player.focus = Math.min(next.player.maxFocus, next.player.focus + 4);
+    }
+  } else if (found === 0) {
+    pushLog(next, { t: "narrative", m: "You run your hands over cold stone and find only cold stone." });
+  }
+  return endTurn(next);
+}
+
 export function quaffPotion(s: GameState): GameState {
   if (s.status !== "playing" || s.player.potions <= 0) return s;
   const next = clone(s);
