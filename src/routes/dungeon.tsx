@@ -118,8 +118,7 @@ function DungeonPage() {
     const c = loadCharacter();
     setCharacter(c);
     const p = makePlayer(c.vitals);
-    const devFloor = typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("floor")) : 0;
-    setGame(generateDungeon(GRID_W, GRID_H, devFloor > 0 ? devFloor : 1, p, c.raceId));
+    setGame(generateDungeon(GRID_W, GRID_H, 1, p, c.raceId));
     setMeta(loadMeta());
   }, []);
 
